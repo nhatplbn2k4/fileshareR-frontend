@@ -4,6 +4,7 @@ import MainLayout from '../components/layout/MainLayout';
 import documentService from '../services/documentService';
 import groupService from '../services/groupService';
 import folderService from '../services/folderService';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import {
   Search as SearchIcon, FileText, File, Download, Clock, HardDrive,
   FolderOpen, AlertCircle, Tag, BarChart2, User, Users, X, Check,
@@ -130,6 +131,7 @@ const SaveToFolderModal = ({ doc, onClose }) => {
 const Search = () => {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [viewingDoc, setViewingDoc] = useState(null);
   const [results, setResults] = useState([]);
   const [groupResults, setGroupResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -286,7 +288,9 @@ const Search = () => {
               <div className="space-y-3">
                 {results.map((doc) => (
                   <div key={doc.id}
-                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-ocean-200 transition">
+                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-ocean-200 transition cursor-pointer select-none"
+                    onDoubleClick={() => setViewingDoc(doc)}
+                    title="Nhấn đúp để xem">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-4 flex-1 min-w-0">
                         <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -392,6 +396,7 @@ const Search = () => {
       {savingDoc && (
         <SaveToFolderModal doc={savingDoc} onClose={() => setSavingDoc(null)} />
       )}
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </MainLayout>
   );
 };

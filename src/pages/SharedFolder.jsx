@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import documentService from '../services/documentService';
 import folderService from '../services/folderService';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
@@ -37,6 +38,7 @@ const SaveToFolderModal = ({ doc, onClose }) => {
   const [myFolders, setMyFolders] = useState([]);
   const [loadingF, setLoadingF] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState(null);
   const [saved, setSaved] = useState(false);
   const [sel, setSel] = useState(null);
 
@@ -383,7 +385,12 @@ const SharedFolder = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {documents.map(doc => (
-                    <tr key={doc.id} className="hover:bg-gray-50 transition">
+                    <tr
+                      key={doc.id}
+                      className="hover:bg-gray-50 transition cursor-pointer select-none"
+                      onDoubleClick={() => setViewingDoc(doc)}
+                      title="Nhấn đúp để xem"
+                    >
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -440,6 +447,7 @@ const SharedFolder = () => {
       {savingDoc && (
         <SaveToFolderModal doc={savingDoc} onClose={() => setSavingDoc(null)} />
       )}
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </div>
   );
 };

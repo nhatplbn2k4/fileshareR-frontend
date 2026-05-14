@@ -145,6 +145,32 @@ const groupService = {
     return response.data;
   },
 
+  // ─── Kiểm duyệt tài liệu (ADMIN/OWNER) ────────────────────────────────────
+
+  /** Danh sách tài liệu đang chờ duyệt */
+  getPendingDocuments: async (groupId) => {
+    const response = await api.get(`/api/groups/${groupId}/documents/pending`);
+    return response.data;
+  },
+
+  /** Số lượng tài liệu đang chờ duyệt (cho badge) */
+  countPendingDocuments: async (groupId) => {
+    const response = await api.get(`/api/groups/${groupId}/documents/pending/count`);
+    return response.data.count;
+  },
+
+  /** Duyệt tài liệu */
+  approveDocument: async (groupId, documentId) => {
+    const response = await api.post(`/api/groups/${groupId}/documents/${documentId}/approve`);
+    return response.data;
+  },
+
+  /** Từ chối tài liệu */
+  rejectDocument: async (groupId, documentId, reason = '') => {
+    const response = await api.post(`/api/groups/${groupId}/documents/${documentId}/reject`, { reason });
+    return response.data;
+  },
+
   // ─── Thư mục nhóm ─────────────────────────────────────────────────────────
 
   /** Danh sách thư mục nhóm */
