@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import documentService from '../services/documentService';
 import folderService from '../services/folderService';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import {
   FileText,
   Upload,
@@ -28,6 +29,7 @@ const Documents = () => {
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [viewingDoc, setViewingDoc] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -260,7 +262,9 @@ const Documents = () => {
             {filteredDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 group"
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 group cursor-pointer select-none"
+                onDoubleClick={() => setViewingDoc(doc)}
+                title="Nhấn đúp để xem"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -357,7 +361,12 @@ const Documents = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredDocuments.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50">
+                  <tr
+                    key={doc.id}
+                    className="hover:bg-gray-50 cursor-pointer select-none"
+                    onDoubleClick={() => setViewingDoc(doc)}
+                    title="Nhấn đúp để xem"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center mr-3">
@@ -447,6 +456,8 @@ const Documents = () => {
           </div>
         </div>
       </div>
+
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </MainLayout>
   );
 };

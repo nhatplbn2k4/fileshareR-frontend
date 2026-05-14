@@ -8,6 +8,7 @@ import {
 import groupService from '../services/groupService';
 import documentService from '../services/documentService';
 import folderService from '../services/folderService';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
@@ -119,6 +120,7 @@ const SharedGroupFolder = () => {
 
   const [folder, setFolder] = useState(null);
   const [subFolders, setSubFolders] = useState([]);
+  const [viewingDoc, setViewingDoc] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -339,7 +341,12 @@ const SharedGroupFolder = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {documents.map(doc => (
-                    <tr key={doc.id} className="hover:bg-gray-50 transition">
+                    <tr
+                      key={doc.id}
+                      className="hover:bg-gray-50 transition cursor-pointer select-none"
+                      onDoubleClick={() => setViewingDoc(doc)}
+                      title="Nhấn đúp để xem"
+                    >
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -393,6 +400,7 @@ const SharedGroupFolder = () => {
       {savingDoc && (
         <SaveToFolderModal doc={savingDoc} onClose={() => setSavingDoc(null)} />
       )}
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </div>
   );
 };

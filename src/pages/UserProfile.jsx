@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import documentService from '../services/documentService';
 import folderService from '../services/folderService';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import {
@@ -121,6 +122,7 @@ const UserProfile = () => {
 
   const [profile, setProfile] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [viewingDoc, setViewingDoc] = useState(null);
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -248,7 +250,12 @@ const UserProfile = () => {
           {documents.length > 0 ? (
             <div className="space-y-3">
               {documents.map(doc => (
-                <div key={doc.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition">
+                <div
+                  key={doc.id}
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer select-none"
+                  onDoubleClick={() => setViewingDoc(doc)}
+                  title="Nhấn đúp để xem"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                       <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -297,6 +304,7 @@ const UserProfile = () => {
       {savingDoc && (
         <SaveToFolderModal doc={savingDoc} onClose={() => setSavingDoc(null)} />
       )}
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </MainLayout>
   );
 };

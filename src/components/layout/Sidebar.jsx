@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import billingService from '../../services/billingService';
+import StorageProgress from '../StorageProgress';
 import {
   LayoutDashboard,
   FileText,
@@ -21,6 +23,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [storage, setStorage] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (user) {
+      billingService.getMyStorage()
+        .then((info) => mounted && setStorage(info))
+        .catch(() => {});
+    }
+    return () => { mounted = false; };
+  }, [user?.id]);
 
   const menuItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
@@ -85,6 +98,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             );
           })}
         </nav>
+
+        {/* Storage mini progress */}
+        {storage && (
+          <Link to="/settings" className="block border-t border-gray-200 hover:bg-gray-50">
+            <StorageProgress
+              used={storage.storageUsed}
+              total={storage.totalQuotaBytes}
+              compact
+            />
+          </Link>
+        )}
 
         {/* User Profile */}
         <div className="border-t border-gray-200 p-4">

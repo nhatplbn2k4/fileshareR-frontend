@@ -5,11 +5,15 @@ import { useAuth } from '../context/AuthContext';
 import groupService from '../services/groupService';
 import documentService from '../services/documentService';
 import folderService from '../services/folderService';
+import billingService from '../services/billingService';
+import StorageProgress from '../components/StorageProgress';
+import StorageUpgradeModal from '../components/StorageUpgradeModal';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import {
-  Users, FileText, Folder, Settings, Globe, Lock, Crown, Shield, User,
+  Users, FileText, Folder, Settings, Globe, Lock, Crown, Shield, ShieldCheck, User,
   Upload, Download, Trash2, Plus, Ban, UserCheck, UserX, ArrowLeft,
   Loader2, AlertTriangle, FolderPlus, RefreshCw, X, Check, Share2, Copy,
-  BookmarkPlus, HardDrive, FolderOpen as FolderOpenIcon, Clock, Camera
+  BookmarkPlus, HardDrive, FolderOpen as FolderOpenIcon, Clock, Camera, Eye
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -95,6 +99,25 @@ const RoleBadge = ({ role }) => {
   const Icon = c.icon;
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${c.cls}`}>
+      <Icon className="w-3 h-3" /> {c.label}
+    </span>
+  );
+};
+
+const ModerationBadge = ({ status, reason }) => {
+  if (!status || status === 'APPROVED') return null;
+  const config = {
+    PENDING:  { label: 'Chờ duyệt', cls: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock },
+    REJECTED: { label: 'Đã từ chối', cls: 'bg-red-100 text-red-700 border-red-200', icon: Ban },
+  };
+  const c = config[status];
+  if (!c) return null;
+  const Icon = c.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${c.cls}`}
+      title={reason || ''}
+    >
       <Icon className="w-3 h-3" /> {c.label}
     </span>
   );
@@ -192,7 +215,8 @@ const GroupSaveToFolderModal = ({ doc, onClose }) => {
 
 // ── Tab: Tài liệu ─────────────────────────────────────────────────────────────
 
-const DocumentsTab = ({ groupId, myRole, isMember }) => {
+const DocumentsTab = ({ groupId, myRole, isMember, onView }) => {
+  const toast = useToast();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -214,7 +238,10 @@ const DocumentsTab = ({ groupId, myRole, isMember }) => {
     const title = file.name.replace(/\.[^/.]+$/, '');
     setUploading(true);
     try {
-      await groupService.uploadDocument(groupId, file, title);
+      const uploaded = await groupService.uploadDocument(groupId, file, title);
+      if (uploaded?.moderationStatus === 'PENDING') {
+        toast.info('Tài liệu của bạn đang chờ admin nhóm duyệt trước khi hiển thị cho thành viên khác.');
+      }
       await fetchDocs();
     } catch (err) {
       setError(err?.response?.data?.message || 'Upload thất bại');
@@ -283,14 +310,22 @@ const DocumentsTab = ({ groupId, myRole, isMember }) => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {documents.map(doc => (
-                <tr key={doc.id} className="hover:bg-gray-50 transition">
+                <tr
+                  key={doc.id}
+                  className="hover:bg-gray-50 transition cursor-pointer select-none"
+                  onDoubleClick={() => onView?.(doc)}
+                  title="Nhấn đúp để xem"
+                >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-ocean-100 rounded-lg flex items-center justify-center">
                         <FileText className="w-4 h-4 text-ocean-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{doc.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900">{doc.title}</p>
+                          <ModerationBadge status={doc.moderationStatus} reason={doc.moderationReason} />
+                        </div>
                         <p className="text-xs text-gray-400">{doc.fileName}</p>
                       </div>
                     </div>
@@ -345,7 +380,7 @@ const DocumentsTab = ({ groupId, myRole, isMember }) => {
 
 // ── Tab: Thư mục (giống Folders cá nhân) ─────────────────────────────────────
 
-const FoldersTab = ({ groupId, myRole, isMember, groupVisibility }) => {
+const FoldersTab = ({ groupId, myRole, isMember, groupVisibility, onView }) => {
   const toast = useToast();
   const fileInputRef = React.useRef(null);
 
@@ -456,7 +491,10 @@ const FoldersTab = ({ groupId, myRole, isMember, groupVisibility }) => {
     const title = file.name.replace(/\.[^/.]+$/, '');
     setUploading(true);
     try {
-      await groupService.uploadDocument(groupId, file, title, currentFolder.id);
+      const uploaded = await groupService.uploadDocument(groupId, file, title, currentFolder.id);
+      if (uploaded?.moderationStatus === 'PENDING') {
+        toast.info('Tài liệu của bạn đang chờ admin nhóm duyệt trước khi hiển thị cho thành viên khác.');
+      }
       await fetchData();
     } catch (err) {
       setError(err?.response?.data?.message || 'Upload thất bại');
@@ -641,14 +679,22 @@ const FoldersTab = ({ groupId, myRole, isMember, groupVisibility }) => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {documents.map(doc => (
-                  <tr key={doc.id} className="hover:bg-gray-50 transition">
+                  <tr
+                    key={doc.id}
+                    className="hover:bg-gray-50 transition cursor-pointer select-none"
+                    onDoubleClick={() => onView?.(doc)}
+                    title="Nhấn đúp để xem"
+                  >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${getFileColor(doc.fileType)}`}>
                           {doc.fileType?.toUpperCase()?.slice(0, 3) || 'DOC'}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{doc.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{doc.title}</p>
+                            <ModerationBadge status={doc.moderationStatus} reason={doc.moderationReason} />
+                          </div>
                           <p className="text-xs text-gray-400">{doc.fileName}</p>
                         </div>
                       </div>
@@ -1040,6 +1086,176 @@ const JoinRequestsTab = ({ groupId }) => {
   );
 };
 
+// ── Tab: Chờ duyệt (Moderation) ──────────────────────────────────────────────
+// Chỉ admin/owner thấy. Hiển thị các tài liệu PENDING + nút Duyệt/Từ chối.
+
+const PendingReviewTab = ({ groupId, onChanged, onView }) => {
+  const toast = useToast();
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
+  const [rejectFor, setRejectFor] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    try { setDocs(await groupService.getPendingDocuments(groupId)); }
+    catch { toast.error('Không thể tải danh sách tài liệu chờ duyệt'); }
+    finally { setLoading(false); }
+  }, [groupId, toast]);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const handleApprove = async (doc) => {
+    setBusyId(doc.id);
+    try {
+      await groupService.approveDocument(groupId, doc.id);
+      setDocs(prev => prev.filter(d => d.id !== doc.id));
+      toast.success(`Đã duyệt "${doc.title}"`);
+      onChanged?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Duyệt thất bại');
+    } finally { setBusyId(null); }
+  };
+
+  const handleReject = async () => {
+    if (!rejectFor) return;
+    const doc = rejectFor;
+    setBusyId(doc.id);
+    try {
+      await groupService.rejectDocument(groupId, doc.id, rejectReason.trim());
+      setDocs(prev => prev.filter(d => d.id !== doc.id));
+      toast.success(`Đã từ chối "${doc.title}"`);
+      onChanged?.();
+      setRejectFor(null);
+      setRejectReason('');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Từ chối thất bại');
+    } finally { setBusyId(null); }
+  };
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        <ShieldCheck className="w-4 h-4 text-amber-500" />
+        Tài liệu của thành viên thường được hệ thống quét tự động. Tài liệu nghi vấn xuất hiện ở đây để bạn quyết định.
+      </div>
+
+      {docs.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+          <ShieldCheck className="w-12 h-12 text-green-300 mx-auto mb-3" />
+          <p className="text-gray-500">Không có tài liệu nào đang chờ duyệt</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {docs.map(doc => (
+            <div key={doc.id} className="bg-white rounded-xl border border-amber-200 shadow-sm p-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-gray-900 truncate">{doc.title}</p>
+                      <span className="px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600 uppercase font-medium">
+                        {doc.fileType}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{doc.fileName}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Người upload: <span className="font-medium">{doc.userName || 'Không rõ'}</span>
+                    </p>
+                    {doc.moderationReason && (
+                      <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+                        <strong>Lý do nghi vấn:</strong> {doc.moderationReason}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onView?.(doc)}
+                    className="flex items-center gap-1.5 px-3 py-2 text-gray-600 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition"
+                    title="Xem trước"
+                  >
+                    <Eye className="w-4 h-4" /> Xem
+                  </button>
+                  <button
+                    onClick={() => handleApprove(doc)}
+                    disabled={busyId === doc.id}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition disabled:opacity-60"
+                  >
+                    {busyId === doc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Duyệt
+                  </button>
+                  <button
+                    onClick={() => { setRejectFor(doc); setRejectReason(doc.moderationReason || ''); }}
+                    disabled={busyId === doc.id}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition disabled:opacity-60"
+                  >
+                    <X className="w-4 h-4" /> Từ chối
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {rejectFor && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Ban className="w-5 h-5 text-red-500" /> Từ chối tài liệu
+              </h3>
+              <button onClick={() => { setRejectFor(null); setRejectReason(''); }}
+                className="p-1 hover:bg-gray-100 rounded-lg">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-sm text-gray-600">
+                Bạn đang từ chối <strong>"{rejectFor.title}"</strong>.
+                Tài liệu sẽ vẫn được giữ lại nhưng ẩn khỏi thành viên khác.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lý do (tùy chọn)</label>
+                <textarea
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  rows={3}
+                  placeholder="Ví dụ: nội dung không phù hợp với quy định nhóm..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500 resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => { setRejectFor(null); setRejectReason(''); }}
+                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleReject}
+                  disabled={busyId === rejectFor.id}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition disabled:opacity-60 text-sm font-medium"
+                >
+                  {busyId === rejectFor.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                  Xác nhận từ chối
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SettingsTab = ({ group, onUpdated, onDeleted, members }) => {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -1055,6 +1271,16 @@ const SettingsTab = ({ group, onUpdated, onDeleted, members }) => {
   const [transferTarget, setTransferTarget] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [groupStorage, setGroupStorage] = useState(null);
+  const [storageOpen, setStorageOpen] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    billingService.getGroupStorage(group.id)
+      .then(info => mounted && setGroupStorage(info))
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [group.id]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -1083,6 +1309,37 @@ const SettingsTab = ({ group, onUpdated, onDeleted, members }) => {
 
   return (
     <div className="max-w-xl space-y-6">
+      {/* Storage card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <h3 className="font-semibold text-gray-900">Bộ nhớ nhóm</h3>
+        {groupStorage ? (
+          <>
+            <StorageProgress
+              used={groupStorage.storageUsed}
+              total={groupStorage.totalQuotaBytes}
+              planName={groupStorage.plan?.name}
+            />
+            <button
+              onClick={() => setStorageOpen(true)}
+              className="w-full px-4 py-2 bg-ocean-500 text-white rounded-lg text-sm font-medium hover:bg-ocean-600 transition-colors"
+            >
+              Nâng cấp / Mua thêm cho nhóm
+            </button>
+          </>
+        ) : (
+          <div className="text-sm text-gray-500">Đang tải...</div>
+        )}
+      </div>
+
+      <StorageUpgradeModal
+        open={storageOpen}
+        onClose={() => setStorageOpen(false)}
+        onSuccess={(info) => setGroupStorage(info)}
+        context="group"
+        groupId={group.id}
+        currentPlanCode={groupStorage?.plan?.code}
+      />
+
       {error && <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 text-sm">{error}</div>}
       {success && <div className="bg-green-50 border border-green-200 text-green-600 rounded-lg px-4 py-3 text-sm flex items-center gap-2"><Check className="w-4 h-4" /> {success}</div>}
 
@@ -1239,12 +1496,19 @@ const GroupDetail = () => {
   const [activeTab, setActiveTab] = useState('documents');
   const [joining, setJoining] = useState(false);
   const [showGroupInvite, setShowGroupInvite] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState(null);
   const [leaving, setLeaving] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinAnswers, setJoinAnswers] = useState([]);
   const [members, setMembers] = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => { fetchGroup(); }, [groupId]);
+
+  const refreshPendingCount = useCallback(async () => {
+    try { setPendingCount(await groupService.countPendingDocuments(groupId)); }
+    catch { /* ignore — chỉ admin mới gọi được endpoint này */ }
+  }, [groupId]);
 
   const fetchGroup = async () => {
     setLoading(true);
@@ -1254,6 +1518,9 @@ const GroupDetail = () => {
       if (g.isMember) {
         try { setMembers(await groupService.getMembers(groupId)); }
         catch { /* ignore */ }
+        if (g.myRole === 'OWNER' || g.myRole === 'ADMIN') {
+          refreshPendingCount();
+        }
       }
     } catch (err) {
       setError(err?.response?.data?.message || 'Không thể tải thông tin nhóm');
@@ -1423,6 +1690,7 @@ const GroupDetail = () => {
     { key: 'documents', label: 'Tài liệu', icon: FileText, show: true },
     { key: 'folders',   label: 'Thư mục',  icon: Folder,   show: true },
     { key: 'members',   label: 'Thành viên', icon: Users,  show: true },
+    { key: 'moderation', label: 'Chờ duyệt', icon: ShieldCheck, show: isAdminOrOwner, badge: pendingCount },
     { key: 'requests',  label: 'Yêu cầu',  icon: UserCheck, show: isAdminOrOwner && group.requireApproval },
     { key: 'settings',  label: 'Cài đặt',  icon: Settings, show: canManageGroup },
   ].filter(t => t.show);
@@ -1513,6 +1781,11 @@ const GroupDetail = () => {
                     }`}
                   >
                     <Icon className="w-4 h-4" /> {tab.label}
+                    {tab.badge > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 text-[11px] font-semibold bg-red-500 text-white rounded-full">
+                        {tab.badge > 99 ? '99+' : tab.badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1521,7 +1794,7 @@ const GroupDetail = () => {
 
           <div className="p-5 md:p-6">
             {activeTab === 'documents' && (
-              <DocumentsTab groupId={groupId} myRole={myRole} isMember={isMember} />
+              <DocumentsTab groupId={groupId} myRole={myRole} isMember={isMember} onView={setViewingDoc} />
             )}
             {activeTab === 'folders' && (
               <FoldersTab
@@ -1529,10 +1802,18 @@ const GroupDetail = () => {
                 myRole={myRole}
                 isMember={isMember}
                 groupVisibility={group.visibility}
+                onView={setViewingDoc}
               />
             )}
             {activeTab === 'members' && (
               <MembersTab groupId={groupId} myRole={myRole} ownerId={group.ownerId} />
+            )}
+            {activeTab === 'moderation' && isAdminOrOwner && (
+              <PendingReviewTab
+                groupId={groupId}
+                onChanged={refreshPendingCount}
+                onView={setViewingDoc}
+              />
             )}
             {activeTab === 'requests' && isAdminOrOwner && (
               <JoinRequestsTab groupId={groupId} />
@@ -1600,6 +1881,8 @@ const GroupDetail = () => {
           </div>
         </div>
       )}
+
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </MainLayout>
   );
 };
