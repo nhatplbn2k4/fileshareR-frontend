@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import folderService from '../services/folderService';
 import documentService from '../services/documentService';
+import PdfToWordModal from '../components/PdfToWordModal';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import {
   Folder,
   FolderOpen,
@@ -27,6 +29,7 @@ import {
   Share2,
   Copy,
   RefreshCw,
+  FileType2,
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -311,6 +314,8 @@ const Folders = () => {
   const [showMenu, setShowMenu]         = useState(null);
   const [showDocMenu, setShowDocMenu]   = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState(null);
 
   // Stats
   const [totalDownloads, setTotalDownloads] = useState(0);
@@ -453,6 +458,14 @@ const Folders = () => {
             >
               <FolderPlus className="w-4 h-4" />
               {currentFolder ? 'Thư Mục Con' : 'Tạo Thư Mục'}
+            </button>
+            <button
+              onClick={() => setShowConvertModal(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-purple-500 text-purple-600 rounded-xl hover:bg-purple-50 transition text-sm font-medium"
+              title="Chuyển PDF sang Word"
+            >
+              <FileType2 className="w-4 h-4" />
+              PDF sang Word
             </button>
           </div>
         </div>
@@ -604,7 +617,12 @@ const Folders = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {documents.map(doc => (
-                        <tr key={doc.id} className="hover:bg-gray-50 transition">
+                        <tr
+                          key={doc.id}
+                          className="hover:bg-gray-50 transition cursor-pointer select-none"
+                          onDoubleClick={() => setViewingDoc(doc)}
+                          title="Nhấn đúp để xem"
+                        >
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -751,6 +769,15 @@ const Folders = () => {
           }}
         />
       )}
+
+      <PdfToWordModal
+        open={showConvertModal}
+        onClose={() => setShowConvertModal(false)}
+        currentFolderId={currentFolder?.id}
+        onSaved={() => fetchData()}
+      />
+
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </MainLayout>
   );
 };
