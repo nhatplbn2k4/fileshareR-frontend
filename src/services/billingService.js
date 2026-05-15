@@ -11,31 +11,30 @@ const billingService = {
     return res.data;
   },
 
-  // User
+  // Storage info
   getMyStorage: async () => {
     const res = await api.get('/api/users/me/storage');
     return res.data;
   },
-  upgradeUserPlan: async (planCode) => {
-    const res = await api.post('/api/users/me/upgrade-plan', { planCode });
-    return res.data;
-  },
-  purchaseUserAddon: async (addonCode) => {
-    const res = await api.post('/api/users/me/purchase-addon', { addonCode });
-    return res.data;
-  },
-
-  // Group
   getGroupStorage: async (groupId) => {
     const res = await api.get(`/api/groups/${groupId}/storage`);
     return res.data;
   },
-  upgradeGroupPlan: async (groupId, planCode) => {
-    const res = await api.post(`/api/groups/${groupId}/upgrade-plan`, { planCode });
-    return res.data;
-  },
-  purchaseGroupAddon: async (groupId, addonCode) => {
-    const res = await api.post(`/api/groups/${groupId}/purchase-addon`, { addonCode });
+
+  /**
+   * Initiate a payment for plan upgrade or addon purchase.
+   *
+   * @param {Object} params
+   * @param {'VNPAY'|'MOMO'} params.provider
+   * @param {'PLAN'|'ADDON'} params.purchaseType
+   * @param {'USER'|'GROUP'} params.scope
+   * @param {string} [params.planCode]   required when purchaseType=PLAN
+   * @param {string} [params.addonCode]  required when purchaseType=ADDON
+   * @param {number} [params.groupId]    required when scope=GROUP
+   * @returns {Promise<{paymentId:number, txnRef:string, provider:string, amountVnd:number, redirectUrl:string}>}
+   */
+  initiatePayment: async (params) => {
+    const res = await api.post('/api/payments/initiate', params);
     return res.data;
   },
 };

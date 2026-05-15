@@ -5,16 +5,17 @@ import { formatBytes, formatVnd } from '../utils/format';
 
 /**
  * Modal nâng cấp plan / mua addon — dùng cho cả user và group.
+ * Sau khi chọn gói/addon + provider, redirect tới cổng thanh toán.
  * Props:
  *  - open: boolean
  *  - onClose: () => void
- *  - onSuccess: (storageInfo) => void
  *  - context: 'user' | 'group'
  *  - groupId?: number  (bắt buộc nếu context='group')
  *  - currentPlanCode?: string  (để disable nút plan đang dùng)
  */
-const StorageUpgradeModal = ({ open, onClose, onSuccess, context, groupId, currentPlanCode }) => {
+const StorageUpgradeModal = ({ open, onClose, context, groupId, currentPlanCode }) => {
   const [tab, setTab] = useState('plan'); // 'plan' | 'addon'
+  const [provider, setProvider] = useState('VNPAY'); // 'VNPAY' | 'MOMO'
   const [plans, setPlans] = useState([]);
   const [addons, setAddons] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -38,34 +39,25 @@ const StorageUpgradeModal = ({ open, onClose, onSuccess, context, groupId, curre
 
   if (!open) return null;
 
-  const handlePurchasePlan = async (code) => {
+  const initiate = async (purchaseType, code) => {
     setSubmittingCode(code);
     try {
-      const info = context === 'group'
-        ? await billingService.upgradeGroupPlan(groupId, code)
-        : await billingService.upgradeUserPlan(code);
-      toast.success('Nâng cấp gói thành công');
-      onSuccess?.(info);
-      onClose();
+      const params = {
+        provider,
+        purchaseType,
+        scope: context === 'group' ? 'GROUP' : 'USER',
+        ...(purchaseType === 'PLAN' ? { planCode: code } : { addonCode: code }),
+        ...(context === 'group' ? { groupId } : {}),
+      };
+      const res = await billingService.initiatePayment(params);
+      if (res?.redirectUrl) {
+        window.location.href = res.redirectUrl;
+      } else {
+        toast.error('Không nhận được URL thanh toán');
+        setSubmittingCode(null);
+      }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Nâng cấp gói thất bại');
-    } finally {
-      setSubmittingCode(null);
-    }
-  };
-
-  const handlePurchaseAddon = async (code) => {
-    setSubmittingCode(code);
-    try {
-      const info = context === 'group'
-        ? await billingService.purchaseGroupAddon(groupId, code)
-        : await billingService.purchaseUserAddon(code);
-      toast.success('Mua thêm bộ nhớ thành công');
-      onSuccess?.(info);
-      onClose();
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Mua thêm thất bại');
-    } finally {
+      toast.error(e.response?.data?.message || 'Khởi tạo thanh toán thất bại');
       setSubmittingCode(null);
     }
   };
@@ -80,7 +72,21 @@ const StorageUpgradeModal = ({ open, onClose, onSuccess, context, groupId, curre
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
 
-        <div className="flex border-b">
+        <div className="px-4 pt-4">
+          <label className="text-sm font-medium text-gray-700">Phương thức thanh toán</label>
+          <div className="flex gap-3 mt-2">
+            <label className={`flex-1 border rounded p-3 cursor-pointer ${provider === 'VNPAY' ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}>
+              <input type="radio" name="provider" value="VNPAY" checked={provider === 'VNPAY'} onChange={(e) => setProvider(e.target.value)} className="mr-2" />
+              <span className="font-medium">VNPay</span>
+            </label>
+            <label className={`flex-1 border rounded p-3 cursor-pointer ${provider === 'MOMO' ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}>
+              <input type="radio" name="provider" value="MOMO" checked={provider === 'MOMO'} onChange={(e) => setProvider(e.target.value)} className="mr-2" />
+              <span className="font-medium">MoMo</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="flex border-b mt-4">
           <button
             className={`flex-1 py-3 font-medium ${tab === 'plan' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}
             onClick={() => setTab('plan')}
@@ -113,14 +119,14 @@ const StorageUpgradeModal = ({ open, onClose, onSuccess, context, groupId, curre
                     </div>
                     <button
                       disabled={current || submittingCode === p.code}
-                      onClick={() => handlePurchasePlan(p.code)}
+                      onClick={() => initiate('PLAN', p.code)}
                       className={`px-4 py-2 rounded text-sm font-medium ${
                         current
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
                       }`}
                     >
-                      {current ? 'Gói hiện tại' : (submittingCode === p.code ? 'Đang xử lý...' : 'Chọn gói')}
+                      {current ? 'Gói hiện tại' : (submittingCode === p.code ? 'Đang chuyển...' : 'Thanh toán')}
                     </button>
                   </div>
                 );
@@ -141,10 +147,10 @@ const StorageUpgradeModal = ({ open, onClose, onSuccess, context, groupId, curre
                   </div>
                   <button
                     disabled={submittingCode === a.code}
-                    onClick={() => handlePurchaseAddon(a.code)}
+                    onClick={() => initiate('ADDON', a.code)}
                     className="px-4 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
                   >
-                    {submittingCode === a.code ? 'Đang xử lý...' : 'Mua thêm'}
+                    {submittingCode === a.code ? 'Đang chuyển...' : 'Thanh toán'}
                   </button>
                 </div>
               ))}
@@ -152,7 +158,7 @@ const StorageUpgradeModal = ({ open, onClose, onSuccess, context, groupId, curre
           )}
 
           <div className="text-xs text-gray-500 mt-4">
-            Đây là giao dịch giả lập cho mục đích demo — không tính phí thật.
+            Bạn sẽ được chuyển tới cổng {provider === 'VNPAY' ? 'VNPay' : 'MoMo'} để hoàn tất thanh toán (sandbox — không tính phí thật).
           </div>
         </div>
       </div>
