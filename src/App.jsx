@@ -17,6 +17,7 @@ import SharedFolder from './pages/SharedFolder';
 import SharedGroupLanding from './pages/SharedGroupLanding';
 import SharedGroupFolder from './pages/SharedGroupFolder';
 import UserProfile from './pages/UserProfile';
+import PaymentResult from './pages/PaymentResult';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -166,6 +167,9 @@ function App() {
 
           {/* Group folder share link (chỉ group PUBLIC) */}
           <Route path="/shared/group-folder/:token" element={<SharedGroupFolder />} />
+
+          {/* Payment gateway callback (VNPay/MoMo redirect — public, no auth required) */}
+          <Route path="/payment/result" element={<PaymentResult />} />
 
           {/* Redirect root to dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
