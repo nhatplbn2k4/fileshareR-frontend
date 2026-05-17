@@ -39,8 +39,18 @@ export const NotificationProvider = ({ children }) => {
         notificationService.list({ page: 0, size: 30 }),
         notificationService.unreadCount(),
       ]);
-      setItems(page.content || []);
+      const list = page.content || [];
+      setItems(list);
       setUnreadCount(count);
+
+      // If user was banned / their group deleted while they were offline,
+      // the notification is in DB but STOMP never reached them. Surface
+      // the most-recent unread blocking event as a modal so the flow
+      // still works on refresh (or first login after ban).
+      const blocker = list.find(
+        (n) => !n.isRead && BLOCKING_TYPES.has(n.type)
+      );
+      if (blocker) setBlockingEvent(blocker);
     } catch (err) {
       console.warn('[notifications] initial load failed', err);
     }
