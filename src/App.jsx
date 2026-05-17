@@ -21,6 +21,7 @@ import PaymentResult from './pages/PaymentResult';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPlaceholder from './pages/admin/AdminPlaceholder';
+import AdminUsers from './pages/admin/AdminUsers';
 import ProtectedAdminRoute from './pages/admin/ProtectedAdminRoute';
 
 // Protected Route component
@@ -186,7 +187,7 @@ function App() {
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="users" element={<AdminPlaceholder title="Người Dùng" description="Quản lý tài khoản, đổi gói, suspend" />} />
+            <Route path="users" element={<AdminUsers />} />
             <Route path="plans" element={<AdminPlaceholder title="Gói & Addon" description="Quản lý plans, storage addons" />} />
             <Route path="documents" element={<AdminPlaceholder title="Tài Liệu" description="Duyệt + xóa tài liệu của user" />} />
             <Route path="payments" element={<AdminPlaceholder title="Giao Dịch" description="Lịch sử thanh toán VNPay/MoMo" />} />
