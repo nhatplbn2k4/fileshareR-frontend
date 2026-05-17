@@ -24,6 +24,7 @@ import AdminPlaceholder from './pages/admin/AdminPlaceholder';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminPlans from './pages/admin/AdminPlans';
 import AdminDocuments from './pages/admin/AdminDocuments';
+import AdminPayments from './pages/admin/AdminPayments';
 import ProtectedAdminRoute from './pages/admin/ProtectedAdminRoute';
 
 // Protected Route component
@@ -192,7 +193,7 @@ function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="plans" element={<AdminPlans />} />
             <Route path="documents" element={<AdminDocuments />} />
-            <Route path="payments" element={<AdminPlaceholder title="Giao Dịch" description="Lịch sử thanh toán VNPay/MoMo" />} />
+            <Route path="payments" element={<AdminPayments />} />
             <Route path="groups" element={<AdminPlaceholder title="Nhóm" description="Quản lý nhóm trên toàn hệ thống" />} />
           </Route>
 

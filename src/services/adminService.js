@@ -86,6 +86,20 @@ const adminService = {
   deleteDocument: async (id) => {
     await api.delete(`/api/admin/documents/${id}`);
   },
+
+  // ── Payments ───────────────────────────────────────────────────────
+  listPayments: async ({ search, provider, status, page = 0, size = 20, sort = 'createdAt,desc' } = {}) => {
+    const params = { page, size, sort };
+    if (search) params.search = search;
+    if (provider) params.provider = provider;
+    if (status) params.status = status;
+    const res = await api.get('/api/admin/payments', { params });
+    return res.data;
+  },
+  getPayment: async (id) => {
+    const res = await api.get(`/api/admin/payments/${id}`);
+    return res.data;
+  },
 };
 
 export default adminService;
