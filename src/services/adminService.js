@@ -38,6 +38,40 @@ const adminService = {
     const res = await api.patch(`/api/admin/users/${userId}`, payload);
     return res.data;
   },
+
+  // ── Plans CRUD ───────────────────────────────────────────────────────
+  listPlans: async () => {
+    const res = await api.get('/api/admin/plans');
+    return res.data;
+  },
+  createPlan: async (payload) => {
+    const res = await api.post('/api/admin/plans', payload);
+    return res.data;
+  },
+  updatePlan: async (id, payload) => {
+    const res = await api.patch(`/api/admin/plans/${id}`, payload);
+    return res.data;
+  },
+  deletePlan: async (id) => {
+    await api.delete(`/api/admin/plans/${id}`);
+  },
+
+  // ── Addons CRUD ──────────────────────────────────────────────────────
+  listAddons: async () => {
+    const res = await api.get('/api/admin/addons');
+    return res.data;
+  },
+  createAddon: async (payload) => {
+    const res = await api.post('/api/admin/addons', payload);
+    return res.data;
+  },
+  updateAddon: async (id, payload) => {
+    const res = await api.patch(`/api/admin/addons/${id}`, payload);
+    return res.data;
+  },
+  deleteAddon: async (id) => {
+    await api.delete(`/api/admin/addons/${id}`);
+  },
 };
 
 export default adminService;
