@@ -100,6 +100,18 @@ const adminService = {
     const res = await api.get(`/api/admin/payments/${id}`);
     return res.data;
   },
+
+  // ── Groups ───────────────────────────────────────────────────────────
+  listGroups: async ({ search, visibility, page = 0, size = 20, sort = 'createdAt,desc' } = {}) => {
+    const params = { page, size, sort };
+    if (search) params.search = search;
+    if (visibility) params.visibility = visibility;
+    const res = await api.get('/api/admin/groups', { params });
+    return res.data;
+  },
+  deleteGroup: async (id) => {
+    await api.delete(`/api/admin/groups/${id}`);
+  },
 };
 
 export default adminService;
