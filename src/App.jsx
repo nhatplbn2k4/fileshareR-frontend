@@ -25,6 +25,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminPlans from './pages/admin/AdminPlans';
 import AdminDocuments from './pages/admin/AdminDocuments';
 import AdminPayments from './pages/admin/AdminPayments';
+import AdminGroups from './pages/admin/AdminGroups';
 import ProtectedAdminRoute from './pages/admin/ProtectedAdminRoute';
 
 // Protected Route component
@@ -194,7 +195,7 @@ function App() {
             <Route path="plans" element={<AdminPlans />} />
             <Route path="documents" element={<AdminDocuments />} />
             <Route path="payments" element={<AdminPayments />} />
-            <Route path="groups" element={<AdminPlaceholder title="Nhóm" description="Quản lý nhóm trên toàn hệ thống" />} />
+            <Route path="groups" element={<AdminGroups />} />
           </Route>
 
           {/* Redirect root to dashboard */}
