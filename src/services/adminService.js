@@ -72,6 +72,20 @@ const adminService = {
   deleteAddon: async (id) => {
     await api.delete(`/api/admin/addons/${id}`);
   },
+
+  // ── Documents ───────────────────────────────────────────────────────
+  listDocuments: async ({ search, fileType, visibility, userId, page = 0, size = 20, sort = 'createdAt,desc' } = {}) => {
+    const params = { page, size, sort };
+    if (search) params.search = search;
+    if (fileType) params.fileType = fileType;
+    if (visibility) params.visibility = visibility;
+    if (userId) params.userId = userId;
+    const res = await api.get('/api/admin/documents', { params });
+    return res.data;
+  },
+  deleteDocument: async (id) => {
+    await api.delete(`/api/admin/documents/${id}`);
+  },
 };
 
 export default adminService;
