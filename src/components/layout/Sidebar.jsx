@@ -16,6 +16,7 @@ import {
   User,
   ChevronDown,
   Users,
+  ShieldCheck,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -98,6 +99,19 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             );
           })}
         </nav>
+
+        {/* Admin link (visible only for ADMIN role) */}
+        {user?.role === 'ADMIN' && (
+          <div className="px-4 pb-4">
+            <Link
+              to="/admin/dashboard"
+              className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow hover:shadow-md transition-shadow"
+            >
+              <ShieldCheck className="w-5 h-5" />
+              <span className="font-medium">Admin Panel</span>
+            </Link>
+          </div>
+        )}
 
         {/* Storage mini progress */}
         {storage && (
