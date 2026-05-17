@@ -18,6 +18,10 @@ import SharedGroupLanding from './pages/SharedGroupLanding';
 import SharedGroupFolder from './pages/SharedGroupFolder';
 import UserProfile from './pages/UserProfile';
 import PaymentResult from './pages/PaymentResult';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminPlaceholder from './pages/admin/AdminPlaceholder';
+import ProtectedAdminRoute from './pages/admin/ProtectedAdminRoute';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -170,6 +174,24 @@ function App() {
 
           {/* Payment gateway callback (VNPay/MoMo redirect — public, no auth required) */}
           <Route path="/payment/result" element={<PaymentResult />} />
+
+          {/* Admin Panel — ROLE_ADMIN only; backend also enforces hasRole('ADMIN') */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedAdminRoute>
+                <AdminLayout />
+              </ProtectedAdminRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminPlaceholder title="Người Dùng" description="Quản lý tài khoản, đổi gói, suspend" />} />
+            <Route path="plans" element={<AdminPlaceholder title="Gói & Addon" description="Quản lý plans, storage addons" />} />
+            <Route path="documents" element={<AdminPlaceholder title="Tài Liệu" description="Duyệt + xóa tài liệu của user" />} />
+            <Route path="payments" element={<AdminPlaceholder title="Giao Dịch" description="Lịch sử thanh toán VNPay/MoMo" />} />
+            <Route path="groups" element={<AdminPlaceholder title="Nhóm" description="Quản lý nhóm trên toàn hệ thống" />} />
+          </Route>
 
           {/* Redirect root to dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
