@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { NotificationProvider } from './context/NotificationContext';
+import BlockingNotificationModal from './components/notifications/BlockingNotificationModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
@@ -76,6 +78,8 @@ function App() {
     <Router>
       <AuthProvider>
         <ToastProvider>
+        <NotificationProvider>
+        <BlockingNotificationModal />
         <Routes>
           {/* Public routes */}
           <Route
@@ -220,6 +224,7 @@ function App() {
             }
           />
         </Routes>
+        </NotificationProvider>
       </ToastProvider>
       </AuthProvider>
     </Router>

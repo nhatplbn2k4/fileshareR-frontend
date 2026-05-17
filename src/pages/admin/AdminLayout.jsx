@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   ShieldCheck,
 } from 'lucide-react';
+import NotificationBell from '../../components/notifications/NotificationBell';
 
 const adminMenu = [
   { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
@@ -122,11 +123,19 @@ const AdminLayout = () => {
       {/* Main content */}
       <div className="lg:ml-64">
         {/* Top bar (mobile) */}
-        <header className="lg:hidden h-16 bg-white border-b border-gray-200 flex items-center px-4">
-          <button onClick={() => setSidebarOpen(true)} className="text-gray-600">
-            <Menu className="w-6 h-6" />
-          </button>
-          <h1 className="ml-4 font-semibold text-gray-900">Admin Panel</h1>
+        <header className="lg:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+          <div className="flex items-center">
+            <button onClick={() => setSidebarOpen(true)} className="text-gray-600">
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="ml-4 font-semibold text-gray-900">Admin Panel</h1>
+          </div>
+          <NotificationBell />
+        </header>
+
+        {/* Top bar (desktop) — slim, hosts notification bell */}
+        <header className="hidden lg:flex h-14 bg-white border-b border-gray-200 items-center justify-end px-8 sticky top-0 z-30">
+          <NotificationBell />
         </header>
 
         <main className="p-6 lg:p-8">
