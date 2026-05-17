@@ -152,6 +152,21 @@ export const NotificationProvider = ({ children }) => {
   const acknowledgeBlocking = useCallback(() => {
     const ev = blockingEvent;
     setBlockingEvent(null);
+
+    // Mark the blocking notification as read so loadInitial's scan does
+    // not re-trigger the modal on every future refresh. For GROUP_DELETED
+    // this is the ONLY path that clears the notification — there is no
+    // server-side "undelete-group" flow that would do it automatically.
+    if (ev && ev.id) {
+      notificationService.markAsRead(ev.id).catch((err) => {
+        console.warn('[notifications] markAsRead on ack failed', err);
+      });
+      setItems((prev) =>
+        prev.map((n) => (n.id === ev.id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+
     // For USER_BANNED — force logout. For GROUP_DELETED — caller decides
     // navigation based on event.referenceId == current route.
     if (ev && ev.type === 'USER_BANNED_BY_PLATFORM') {
