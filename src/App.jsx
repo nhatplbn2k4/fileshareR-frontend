@@ -28,6 +28,7 @@ import AdminPlans from './pages/admin/AdminPlans';
 import AdminDocuments from './pages/admin/AdminDocuments';
 import AdminPayments from './pages/admin/AdminPayments';
 import AdminGroups from './pages/admin/AdminGroups';
+import AdminPlagiarism from './pages/admin/AdminPlagiarism';
 import ProtectedAdminRoute from './pages/admin/ProtectedAdminRoute';
 
 // Protected Route component
@@ -200,6 +201,8 @@ function App() {
             <Route path="documents" element={<AdminDocuments />} />
             <Route path="payments" element={<AdminPayments />} />
             <Route path="groups" element={<AdminGroups />} />
+            <Route path="plagiarism" element={<AdminPlagiarism />} />
+            <Route path="plagiarism/:docId" element={<AdminPlagiarism />} />
           </Route>
 
           {/* Redirect root to dashboard */}
