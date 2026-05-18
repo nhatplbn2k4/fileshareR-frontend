@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCheck, Trash2, Download, UserPlus, ShieldAlert, Settings, FileWarning, CreditCard, Users } from 'lucide-react';
+import { CheckCheck, Trash2, Download, UserPlus, ShieldAlert, Settings, FileWarning, CreditCard, Users, Copy } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 
 // Per-type icon + accent — keeps the dropdown scannable.
@@ -17,6 +17,7 @@ const ICONS = {
   PLATFORM_ADDON_PURCHASED: { icon: CreditCard, color: 'text-purple-500' },
   GROUP_DELETED_BY_PLATFORM: { icon: ShieldAlert, color: 'text-red-500' },
   USER_BANNED_BY_PLATFORM: { icon: ShieldAlert, color: 'text-red-500' },
+  PLAGIARISM_REPORT: { icon: Copy, color: 'text-orange-500' },
 };
 
 function formatRelative(iso) {

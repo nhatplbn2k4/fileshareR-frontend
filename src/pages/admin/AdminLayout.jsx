@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import {
   LayoutDashboard,
   Users,
@@ -13,8 +14,10 @@ import {
   X,
   ArrowLeft,
   ShieldCheck,
+  Copy,
 } from 'lucide-react';
 import NotificationBell from '../../components/notifications/NotificationBell';
+import plagiarismService from '../../services/plagiarismService';
 
 const adminMenu = [
   { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
@@ -23,17 +26,51 @@ const adminMenu = [
   { path: '/admin/documents', icon: FileText, label: 'Tài Liệu' },
   { path: '/admin/payments', icon: CreditCard, label: 'Giao Dịch' },
   { path: '/admin/groups', icon: UsersRound, label: 'Nhóm' },
+  { path: '/admin/plagiarism', icon: Copy, label: 'Đạo Văn', badgeKey: 'plagiarism' },
 ];
 
 const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { items } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [plagiarismPending, setPlagiarismPending] = useState(0);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const refreshPlagiarismCount = useCallback(async () => {
+    try {
+      const count = await plagiarismService.pendingCount();
+      setPlagiarismPending(count || 0);
+    } catch (e) {
+      // Best-effort badge — không hiển thị nếu fail
+    }
+  }, []);
+
+  // Initial fetch + khi notification mới về PLAGIARISM_REPORT thì refresh
+  useEffect(() => {
+    refreshPlagiarismCount();
+  }, [refreshPlagiarismCount]);
+
+  useEffect(() => {
+    const hasNewPlagiarism = items.some((n) => n.type === 'PLAGIARISM_REPORT');
+    if (hasNewPlagiarism) refreshPlagiarismCount();
+  }, [items, refreshPlagiarismCount]);
+
+  // Refresh khi chuyển route admin (admin vừa resolve report → count giảm)
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin')) {
+      refreshPlagiarismCount();
+    }
+  }, [location.pathname, refreshPlagiarismCount]);
+
+  const badgeValueFor = (key) => {
+    if (key === 'plagiarism' && plagiarismPending > 0) return plagiarismPending;
+    return null;
   };
 
   return (
@@ -72,7 +109,8 @@ const AdminLayout = () => {
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {adminMenu.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname.startsWith(item.path);
+            const badge = badgeValueFor(item.badgeKey);
             return (
               <Link
                 key={item.path}
@@ -84,7 +122,18 @@ const AdminLayout = () => {
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium flex-1">{item.label}</span>
+                {badge != null && (
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      isActive
+                        ? 'bg-white text-purple-600'
+                        : 'bg-red-500 text-white'
+                    }`}
+                  >
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </Link>
             );
           })}
