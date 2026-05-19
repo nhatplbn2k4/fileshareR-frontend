@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import billingService from '../../services/billingService';
+import groupService from '../../services/groupService';
 import StorageProgress from '../StorageProgress';
 import {
   LayoutDashboard,
@@ -17,7 +18,31 @@ import {
   ChevronDown,
   Users,
   ShieldCheck,
+  Pin,
+  PinOff,
+  Bookmark,
 } from 'lucide-react';
+
+const PIN_STORAGE_KEY = 'fsr-pinned-groups';
+const SHORTCUT_LIMIT = 6;
+
+const readPinned = () => {
+  try {
+    const raw = localStorage.getItem(PIN_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(Number).filter(Number.isFinite) : [];
+  } catch {
+    return [];
+  }
+};
+
+const writePinned = (ids) => {
+  try {
+    localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore (private mode, quota exceeded)
+  }
+};
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
@@ -25,6 +50,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [storage, setStorage] = useState(null);
+  const [myGroups, setMyGroups] = useState([]);
+  const [pinnedIds, setPinnedIds] = useState(readPinned);
 
   useEffect(() => {
     let mounted = true;
@@ -32,9 +59,34 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       billingService.getMyStorage()
         .then((info) => mounted && setStorage(info))
         .catch(() => {});
+      groupService.getMyGroups()
+        .then((groups) => mounted && setMyGroups(Array.isArray(groups) ? groups : []))
+        .catch(() => {});
     }
     return () => { mounted = false; };
   }, [user?.id]);
+
+  const togglePin = useCallback((groupId) => {
+    setPinnedIds((prev) => {
+      const next = prev.includes(groupId)
+        ? prev.filter((id) => id !== groupId)
+        : [groupId, ...prev];
+      writePinned(next);
+      return next;
+    });
+  }, []);
+
+  // Shortcuts: pinned first (preserving pin order), then most-recent non-pinned by createdAt desc.
+  const shortcuts = useMemo(() => {
+    if (!myGroups.length) return [];
+    const byId = new Map(myGroups.map((g) => [g.id, g]));
+    const pinned = pinnedIds.map((id) => byId.get(id)).filter(Boolean);
+    const pinnedSet = new Set(pinned.map((g) => g.id));
+    const recent = myGroups
+      .filter((g) => !pinnedSet.has(g.id))
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return [...pinned, ...recent].slice(0, SHORTCUT_LIMIT);
+  }, [myGroups, pinnedIds]);
 
   const menuItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
@@ -98,6 +150,72 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               </Link>
             );
           })}
+
+          {/* Shortcuts — pinned + recent groups */}
+          {shortcuts.length > 0 && (
+            <div className="pt-4 mt-2 border-t border-gray-100">
+              <div className="flex items-center space-x-2 px-4 mb-2">
+                <Bookmark className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  Lối Tắt
+                </span>
+              </div>
+              <div className="space-y-1">
+                {shortcuts.map((group) => {
+                  const isPinned = pinnedIds.includes(group.id);
+                  const isActive = location.pathname === `/groups/${group.id}`;
+                  return (
+                    <div
+                      key={group.id}
+                      className={`group/item flex items-center rounded-lg transition-colors duration-200 ${
+                        isActive ? 'bg-ocean-50' : 'hover:bg-ocean-50/60'
+                      }`}
+                    >
+                      <Link
+                        to={`/groups/${group.id}`}
+                        className="flex-1 flex items-center space-x-3 px-4 py-2 min-w-0"
+                      >
+                        {group.avatarUrl ? (
+                          <img
+                            src={group.avatarUrl}
+                            alt=""
+                            className="w-6 h-6 rounded-md object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded-md bg-ocean-100 text-ocean-600 flex items-center justify-center flex-shrink-0">
+                            <Users className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                        <span
+                          className={`text-sm truncate ${
+                            isActive ? 'text-ocean-700 font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          {group.name}
+                        </span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          togglePin(group.id);
+                        }}
+                        title={isPinned ? 'Bỏ ghim' : 'Ghim lên đầu'}
+                        className={`p-1.5 mr-2 rounded-md transition-opacity ${
+                          isPinned
+                            ? 'text-ocean-600 opacity-100'
+                            : 'text-gray-400 opacity-0 group-hover/item:opacity-100 hover:text-ocean-600'
+                        }`}
+                      >
+                        {isPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Admin link (visible only for ADMIN role) */}
