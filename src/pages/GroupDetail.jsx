@@ -9,6 +9,7 @@ import billingService from '../services/billingService';
 import StorageProgress from '../components/StorageProgress';
 import StorageUpgradeModal from '../components/StorageUpgradeModal';
 import DocumentViewerModal from '../components/DocumentViewerModal';
+import CoverPicker from '../components/groups/CoverPicker';
 import {
   Users, FileText, Folder, Settings, Globe, Lock, Crown, Shield, ShieldCheck, User,
   Upload, Download, Trash2, Plus, Ban, UserCheck, UserX, ArrowLeft,
@@ -1369,6 +1370,33 @@ const SettingsTab = ({ group, onUpdated, onDeleted, members }) => {
           </div>
           <p className="text-sm text-gray-500">Click biểu tượng camera để đổi avatar nhóm</p>
         </div>
+
+        {/* Group cover picker */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Ảnh bìa (16:9)</label>
+          <CoverPicker
+            value={{
+              presetId: null,
+              presetUrl: group.coverImageUrl,
+              customBlob: null,
+              customUrl: null,
+            }}
+            onChange={async (next) => {
+              try {
+                if (next.customBlob) {
+                  const res = await groupService.uploadCover(group.id, next.customBlob);
+                  onUpdated({ coverImageUrl: res.coverImageUrl });
+                } else if (next.presetId) {
+                  const updated = await groupService.setCoverPreset(group.id, next.presetId);
+                  onUpdated({ coverImageUrl: updated.coverImageUrl });
+                }
+              } catch (err) {
+                setError(err?.response?.data?.message || 'Cập nhật ảnh bìa thất bại');
+              }
+            }}
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Tên nhóm</label>
           <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
@@ -1704,9 +1732,15 @@ const GroupDetail = () => {
           <ArrowLeft className="w-4 h-4" /> Quay lại
         </button>
 
-        {/* Group Header */}
-        <div className="bg-gradient-to-r from-ocean-500 to-ocean-600 rounded-2xl p-6 md:p-8 text-white shadow-lg">
-          <div className="flex items-start gap-5 flex-wrap">
+        {/* Group Header — cover image background + dark gradient overlay */}
+        <div
+          className="relative rounded-2xl p-6 md:p-8 text-white shadow-lg overflow-hidden bg-cover bg-center bg-gradient-to-r from-ocean-500 to-ocean-600"
+          style={group.coverImageUrl ? { backgroundImage: `url(${group.coverImageUrl})` } : undefined}
+        >
+          {group.coverImageUrl && (
+            <div className="absolute inset-0 bg-gradient-to-r from-ocean-900/80 via-ocean-800/60 to-ocean-700/40" />
+          )}
+          <div className="relative flex items-start gap-5 flex-wrap">
             <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl font-bold">
               {group.avatarUrl
                 ? <img src={group.avatarUrl} alt="" className="w-16 h-16 rounded-2xl object-cover" />

@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   ShieldCheck,
   Copy,
+  Image,
 } from 'lucide-react';
 import NotificationBell from '../../components/notifications/NotificationBell';
 import plagiarismService from '../../services/plagiarismService';
@@ -26,6 +27,7 @@ const adminMenu = [
   { path: '/admin/documents', icon: FileText, label: 'Tài Liệu' },
   { path: '/admin/payments', icon: CreditCard, label: 'Giao Dịch' },
   { path: '/admin/groups', icon: UsersRound, label: 'Nhóm' },
+  { path: '/admin/group-covers', icon: Image, label: 'Ảnh Bìa Nhóm' },
   { path: '/admin/plagiarism', icon: Copy, label: 'Đạo Văn', badgeKey: 'plagiarism' },
 ];
 

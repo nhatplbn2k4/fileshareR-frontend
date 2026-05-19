@@ -49,6 +49,28 @@ const groupService = {
     return response.data;
   },
 
+  /** Upload ảnh bìa custom 16:9 (OWNER). file = Blob từ cropper. */
+  uploadCover: async (groupId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(`/api/groups/${groupId}/cover/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data; // { coverImageUrl }
+  },
+
+  /** Set cover từ preset (OWNER) */
+  setCoverPreset: async (groupId, presetId) => {
+    const response = await api.patch(`/api/groups/${groupId}/cover`, null, { params: { presetId } });
+    return response.data; // GroupResponse
+  },
+
+  /** List active cover presets (user picker) */
+  listCoverPresets: async () => {
+    const response = await api.get('/api/group-cover-presets');
+    return response.data;
+  },
+
   /** Xóa nhóm (OWNER) */
   deleteGroup: async (groupId) => {
     const response = await api.delete(`/api/groups/${groupId}`);

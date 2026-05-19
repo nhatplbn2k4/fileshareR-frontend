@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useNavigate } from 'react-router-dom';
 import groupService from '../services/groupService';
+import CoverPicker from '../components/groups/CoverPicker';
 import {
   Users, Plus, Search, Globe, Lock, Crown, Shield,
   User, ArrowRight, Loader2, RefreshCw, X
@@ -38,37 +39,44 @@ const VisibilityBadge = ({ visibility }) => (
 const GroupCard = ({ group, onClick }) => (
   <div
     onClick={() => onClick(group.id)}
-    className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-ocean-200 transition-all duration-200 cursor-pointer group"
+    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-ocean-200 transition-all duration-200 cursor-pointer group overflow-hidden"
   >
-    <div className="flex items-start justify-between mb-3">
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+    {/* Cover 16:9 */}
+    <div className="relative w-full aspect-video bg-gradient-to-br from-ocean-400 to-ocean-700">
+      {group.coverImageUrl && (
+        <img src={group.coverImageUrl} alt="" className="w-full h-full object-cover" />
+      )}
+      <ArrowRight className="absolute top-3 right-3 w-5 h-5 text-white/80 group-hover:text-white transition-colors" />
+    </div>
+
+    <div className="p-5">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-bold text-lg shadow-sm flex-shrink-0 -mt-10 ring-4 ring-white">
           {group.avatarUrl
             ? <img src={group.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover" />
             : group.name.charAt(0).toUpperCase()}
         </div>
-        <div>
-          <h3 className="font-semibold text-gray-900 group-hover:text-ocean-600 transition-colors">{group.name}</h3>
-          <div className="flex items-center gap-2 mt-1">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 group-hover:text-ocean-600 transition-colors truncate">{group.name}</h3>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <VisibilityBadge visibility={group.visibility} />
             {group.myRole && <RoleBadge role={group.myRole} />}
           </div>
         </div>
       </div>
-      <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-ocean-500 transition-colors mt-1" />
-    </div>
 
-    {group.description && (
-      <p className="text-sm text-gray-500 mb-3 line-clamp-2">{group.description}</p>
-    )}
+      {group.description && (
+        <p className="text-sm text-gray-500 mb-3 line-clamp-2">{group.description}</p>
+      )}
 
-    <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-      <span className="text-xs text-gray-400 flex items-center gap-1">
-        <Users className="w-3.5 h-3.5" /> {group.memberCount} thành viên
-      </span>
-      <span className="text-xs text-gray-400">
-        bởi <span className="font-medium text-gray-600">{group.ownerName}</span>
-      </span>
+      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+        <span className="text-xs text-gray-400 flex items-center gap-1">
+          <Users className="w-3.5 h-3.5" /> {group.memberCount} thành viên
+        </span>
+        <span className="text-xs text-gray-400">
+          bởi <span className="font-medium text-gray-600">{group.ownerName}</span>
+        </span>
+      </div>
     </div>
   </div>
 );
@@ -77,6 +85,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({ name: '', description: '', visibility: 'PRIVATE' });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [cover, setCover] = useState({ presetId: null, presetUrl: null, customBlob: null, customUrl: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -92,12 +101,21 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
     if (!form.name.trim()) return setError('Tên nhóm không được để trống');
     setLoading(true);
     try {
-      const group = await groupService.createGroup(form);
-      // Upload avatar nếu có chọn
+      // Create group với preset id nếu user chọn preset, server sẽ random pick khác nếu null
+      const payload = { ...form };
+      if (cover.presetId) payload.coverPresetId = cover.presetId;
+      const group = await groupService.createGroup(payload);
+
+      // Upload avatar
       if (avatarFile) {
+        try { await groupService.uploadAvatar(group.id, avatarFile); } catch {}
+      }
+      // Upload custom cover (override preset/random)
+      if (cover.customBlob) {
         try {
-          await groupService.uploadAvatar(group.id, avatarFile);
-        } catch { /* bỏ qua lỗi avatar, nhóm đã tạo */ }
+          const res = await groupService.uploadCover(group.id, cover.customBlob);
+          group.coverImageUrl = res.coverImageUrl;
+        } catch {}
       }
       onCreated(group);
     } catch (err) {
@@ -108,13 +126,13 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8 overflow-hidden">
         <div className="bg-gradient-to-r from-ocean-500 to-ocean-600 p-6 text-white">
           <h2 className="text-xl font-bold">Tạo nhóm mới</h2>
           <p className="text-ocean-100 text-sm mt-1">Tạo không gian chia sẻ tài liệu cho nhóm của bạn</p>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-2 text-sm">{error}</div>
           )}
@@ -157,6 +175,14 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-transparent resize-none"
             />
           </div>
+
+          {/* Cover picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ảnh bìa (16:9)</label>
+            <p className="text-xs text-gray-500 mb-2">Để trống — hệ thống tự chọn ngẫu nhiên. Bạn có thể đổi sau.</p>
+            <CoverPicker value={cover} onChange={setCover} />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Chế độ nhóm</label>
             <div className="grid grid-cols-2 gap-3">
