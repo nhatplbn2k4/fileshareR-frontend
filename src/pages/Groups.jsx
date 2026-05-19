@@ -49,19 +49,21 @@ const GroupCard = ({ group, onClick }) => (
       <ArrowRight className="absolute top-3 right-3 w-5 h-5 text-white/80 group-hover:text-white transition-colors" />
     </div>
 
-    <div className="p-5">
-      <div className="flex items-end gap-3 mb-3 -mt-8">
-        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-bold text-xl shadow-lg flex-shrink-0 ring-4 ring-white overflow-hidden">
+    <div className="px-5 pb-5 pt-0 relative">
+      {/* Avatar overlaps the cover from below (50% pull-up) */}
+      <div className="relative z-10 -mt-8 mb-3">
+        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg ring-4 ring-white overflow-hidden">
           {group.avatarUrl
             ? <img src={group.avatarUrl} alt="" className="w-full h-full object-cover" />
             : group.name.charAt(0).toUpperCase()}
         </div>
-        <div className="flex-1 min-w-0 pb-1">
-          <h3 className="font-semibold text-gray-900 group-hover:text-ocean-600 transition-colors truncate">{group.name}</h3>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <VisibilityBadge visibility={group.visibility} />
-            {group.myRole && <RoleBadge role={group.myRole} />}
-          </div>
+      </div>
+
+      <div className="mb-3">
+        <h3 className="font-semibold text-gray-900 group-hover:text-ocean-600 transition-colors truncate">{group.name}</h3>
+        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+          <VisibilityBadge visibility={group.visibility} />
+          {group.myRole && <RoleBadge role={group.myRole} />}
         </div>
       </div>
 
