@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import billingService from '../../services/billingService';
 import groupService from '../../services/groupService';
 import StorageProgress from '../StorageProgress';
+import logoImg from '../../assets/logo1024x1024.png';
 import {
   LayoutDashboard,
   FileText,
@@ -121,9 +122,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
           <Link to="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-ocean-500 to-ocean-600 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
+            <img src={logoImg} alt="FileShareR" className="w-9 h-9 rounded-lg object-contain" />
             <span className="text-xl font-bold text-gray-900">FileShareR</span>
           </Link>
           <button onClick={toggleSidebar} className="lg:hidden text-gray-500 hover:text-gray-700">
