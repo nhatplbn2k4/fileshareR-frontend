@@ -50,13 +50,13 @@ const GroupCard = ({ group, onClick }) => (
     </div>
 
     <div className="p-5">
-      <div className="flex items-start gap-3 mb-3">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-bold text-lg shadow-sm flex-shrink-0 -mt-10 ring-4 ring-white">
+      <div className="flex items-end gap-3 mb-3 -mt-8">
+        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-bold text-xl shadow-lg flex-shrink-0 ring-4 ring-white overflow-hidden">
           {group.avatarUrl
-            ? <img src={group.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover" />
+            ? <img src={group.avatarUrl} alt="" className="w-full h-full object-cover" />
             : group.name.charAt(0).toUpperCase()}
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pb-1">
           <h3 className="font-semibold text-gray-900 group-hover:text-ocean-600 transition-colors truncate">{group.name}</h3>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <VisibilityBadge visibility={group.visibility} />

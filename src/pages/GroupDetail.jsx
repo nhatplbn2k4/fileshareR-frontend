@@ -1732,61 +1732,74 @@ const GroupDetail = () => {
           <ArrowLeft className="w-4 h-4" /> Quay lại
         </button>
 
-        {/* Group Header — cover image background + dark gradient overlay */}
-        <div
-          className="relative rounded-2xl p-6 md:p-8 text-white shadow-lg overflow-hidden bg-cover bg-center bg-gradient-to-r from-ocean-500 to-ocean-600"
-          style={group.coverImageUrl ? { backgroundImage: `url(${group.coverImageUrl})` } : undefined}
-        >
-          {group.coverImageUrl && (
-            <div className="absolute inset-0 bg-gradient-to-r from-ocean-900/80 via-ocean-800/60 to-ocean-700/40" />
-          )}
-          <div className="relative flex items-start gap-5 flex-wrap">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl font-bold">
-              {group.avatarUrl
-                ? <img src={group.avatarUrl} alt="" className="w-16 h-16 rounded-2xl object-cover" />
-                : group.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-bold">{group.name}</h1>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm ${isPublic ? 'bg-green-500/20 text-green-100 border border-green-400/30' : 'bg-white/20 text-white/80 border border-white/20'}`}>
-                  {isPublic ? <Globe className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                  {isPublic ? 'Công khai' : 'Riêng tư'}
-                </span>
+        {/* Group Header — 16:9 cover + info section below with avatar overlap */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Cover 16:9 — max-height clamps on wide screens */}
+          <div className="relative w-full aspect-video max-h-72 bg-gradient-to-r from-ocean-500 to-ocean-600">
+            {group.coverImageUrl && (
+              <img
+                src={group.coverImageUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+          </div>
+
+          {/* Info section */}
+          <div className="px-6 md:px-8 pb-6 pt-0 relative">
+            <div className="flex items-end gap-5 flex-wrap">
+              {/* Avatar overlap */}
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white ring-4 ring-white shadow-lg overflow-hidden -mt-12 flex items-center justify-center text-3xl md:text-4xl font-bold text-ocean-600 bg-gradient-to-br from-ocean-100 to-ocean-200 flex-shrink-0">
+                {group.avatarUrl
+                  ? <img src={group.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  : group.name.charAt(0).toUpperCase()}
               </div>
-              {group.description && <p className="text-ocean-100 mt-1.5 text-sm">{group.description}</p>}
-              <div className="flex items-center gap-4 mt-3 text-sm text-ocean-200 flex-wrap">
-                <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {group.memberCount} thành viên</span>
-                <span>Chủ nhóm: <strong className="text-white">{group.ownerName}</strong></span>
-                {myRole && <RoleBadge role={myRole} />}
+
+              {/* Title + meta */}
+              <div className="flex-1 min-w-0 pt-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{group.name}</h1>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${isPublic ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
+                    {isPublic ? <Globe className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                    {isPublic ? 'Công khai' : 'Riêng tư'}
+                  </span>
+                </div>
+                {group.description && <p className="text-gray-600 mt-1.5 text-sm">{group.description}</p>}
+                <div className="flex items-center gap-4 mt-3 text-sm text-gray-500 flex-wrap">
+                  <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {group.memberCount} thành viên</span>
+                  <span>Chủ nhóm: <strong className="text-gray-900">{group.ownerName}</strong></span>
+                  {myRole && <RoleBadge role={myRole} />}
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3">
-              {isMember && group.shareToken && (
-                <button onClick={() => setShowGroupInvite(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white/20 text-white rounded-xl font-semibold hover:bg-white/30 transition border border-white/30">
-                  <Share2 className="w-4 h-4" /> Chia sẻ nhóm
-                </button>
-              )}
-              {isAuthenticated && !isMember && isPublic && !group.hasPendingRequest && (
-                <button onClick={handleJoin} disabled={joining}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white text-ocean-600 rounded-xl font-semibold hover:bg-ocean-50 transition shadow disabled:opacity-60">
-                  {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
-                  {group.requireApproval ? 'Xin tham gia' : 'Tham gia'}
-                </button>
-              )}
-              {isAuthenticated && !isMember && group.hasPendingRequest && (
-                <span className="flex items-center gap-2 px-5 py-2.5 bg-white/20 text-white rounded-xl font-semibold border border-white/30">
-                  <Clock className="w-4 h-4" /> Chờ duyệt
-                </span>
-              )}
-              {isMember && !isOwner && (
-                <button onClick={handleLeave} disabled={leaving}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white/20 text-white rounded-xl font-semibold hover:bg-white/30 transition border border-white/30 disabled:opacity-60">
-                  {leaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                  Rời nhóm
-                </button>
-              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-3">
+                {isMember && group.shareToken && (
+                  <button onClick={() => setShowGroupInvite(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-ocean-50 text-ocean-700 rounded-xl font-semibold hover:bg-ocean-100 transition border border-ocean-200">
+                    <Share2 className="w-4 h-4" /> Chia sẻ nhóm
+                  </button>
+                )}
+                {isAuthenticated && !isMember && isPublic && !group.hasPendingRequest && (
+                  <button onClick={handleJoin} disabled={joining}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-ocean-500 to-ocean-600 text-white rounded-xl font-semibold hover:from-ocean-600 hover:to-ocean-700 transition shadow disabled:opacity-60">
+                    {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                    {group.requireApproval ? 'Xin tham gia' : 'Tham gia'}
+                  </button>
+                )}
+                {isAuthenticated && !isMember && group.hasPendingRequest && (
+                  <span className="flex items-center gap-2 px-5 py-2.5 bg-amber-50 text-amber-700 rounded-xl font-semibold border border-amber-200">
+                    <Clock className="w-4 h-4" /> Chờ duyệt
+                  </span>
+                )}
+                {isMember && !isOwner && (
+                  <button onClick={handleLeave} disabled={leaving}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition border border-gray-200 disabled:opacity-60">
+                    {leaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                    Rời nhóm
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
