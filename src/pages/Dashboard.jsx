@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import documentService from '../services/documentService';
@@ -56,28 +57,55 @@ const StatCard = ({ icon: Icon, title, value, subtitle, color }) => (
   </div>
 );
 
-const RecentDocument = ({ doc }) => (
-  <Link
-    to={doc.folderId ? `/folders?folder=${doc.folderId}` : '/documents'}
-    className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-  >
-    <div className="flex items-center space-x-3 min-w-0">
-      <div className="w-10 h-10 bg-ocean-100 rounded-lg flex items-center justify-center flex-shrink-0">
-        <FileText className="w-5 h-5 text-ocean-600" />
+// Single-click: navigate to containing folder (or doc list)
+// Double-click: open inline viewer modal — matches Folders/Documents pages UX
+const RecentDocument = ({ doc, onView }) => {
+  const navigate = useNavigate();
+  const clickTimer = useRef(null);
+  const target = doc.folderId ? `/folders?folder=${doc.folderId}` : '/documents';
+
+  const handleClick = () => {
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => {
+      navigate(target);
+      clickTimer.current = null;
+    }, 220);
+  };
+  const handleDoubleClick = () => {
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+    onView(doc);
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      title="Click để mở thư mục · Double-click để xem nhanh"
+      className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200 cursor-pointer select-none"
+    >
+      <div className="flex items-center space-x-3 min-w-0">
+        <div className="w-10 h-10 bg-ocean-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <FileText className="w-5 h-5 text-ocean-600" />
+        </div>
+        <div className="min-w-0">
+          <p className="font-medium text-gray-900 truncate">{doc.title}</p>
+          <p className="text-xs text-gray-500 truncate">
+            {doc.fileName} · {formatRelative(doc.createdAt)}
+          </p>
+        </div>
       </div>
-      <div className="min-w-0">
-        <p className="font-medium text-gray-900 truncate">{doc.title}</p>
-        <p className="text-xs text-gray-500 truncate">
-          {doc.fileName} · {formatRelative(doc.createdAt)}
-        </p>
+      <div className="text-right text-xs text-gray-600 flex items-center flex-shrink-0 ml-2">
+        <Download className="w-3.5 h-3.5 mr-1" />
+        {doc.downloadCount || 0}
       </div>
     </div>
-    <div className="text-right text-xs text-gray-600 flex items-center flex-shrink-0 ml-2">
-      <Download className="w-3.5 h-3.5 mr-1" />
-      {doc.downloadCount || 0}
-    </div>
-  </Link>
-);
+  );
+};
 
 // Map notification type → icon + accent
 const ACTIVITY_ICONS = {
@@ -139,6 +167,7 @@ const Dashboard = () => {
   const [recentDocuments, setRecentDocuments] = useState([]);
   const [recentFolders, setRecentFolders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewingDoc, setViewingDoc] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -323,7 +352,7 @@ const Dashboard = () => {
             <div className="p-3 space-y-1">
               {recentDocuments.length > 0 ? (
                 recentDocuments.map((doc) => (
-                  <RecentDocument key={doc.id} doc={doc} />
+                  <RecentDocument key={doc.id} doc={doc} onView={setViewingDoc} />
                 ))
               ) : (
                 <div className="text-center py-10">
@@ -363,6 +392,8 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </MainLayout>
   );
 };
