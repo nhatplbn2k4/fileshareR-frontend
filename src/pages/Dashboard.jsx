@@ -58,7 +58,7 @@ const StatCard = ({ icon: Icon, title, value, subtitle, color }) => (
 
 const RecentDocument = ({ doc }) => (
   <Link
-    to={`/documents/${doc.id}`}
+    to={doc.folderId ? `/folders?folder=${doc.folderId}` : '/documents'}
     className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200"
   >
     <div className="flex items-center space-x-3 min-w-0">
@@ -192,7 +192,7 @@ const Dashboard = () => {
         title: `Tải lên tài liệu "${doc.title}"`,
         message: doc.fileName,
         at: doc.createdAt,
-        link: `/documents/${doc.id}`,
+        link: doc.folderId ? `/folders?folder=${doc.folderId}` : '/documents',
       });
     });
 
@@ -202,7 +202,7 @@ const Dashboard = () => {
         iconKey: 'GROUP_JOIN_APPROVED',
         title: `Tạo thư mục "${folder.name}"`,
         at: folder.createdAt,
-        link: `/folders/${folder.id}`,
+        link: `/folders?folder=${folder.id}`,
       });
     });
 

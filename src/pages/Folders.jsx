@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import folderService from '../services/folderService';
 import documentService from '../services/documentService';
@@ -298,6 +298,7 @@ const ShareModal = ({ folder, onClose, onRotated }) => {
 
 const Folders = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const [folders, setFolders]         = useState([]);
   const [currentFolder, setCurrentFolder] = useState(null);
@@ -323,6 +324,25 @@ const Folders = () => {
   const fileInputRef = useRef(null);
 
   useEffect(() => { fetchData(); }, [currentFolder]);
+
+  // Deep-link: ?folder=<id> → preselect folder (vd: click từ Dashboard "Tài liệu gần đây")
+  useEffect(() => {
+    const folderId = searchParams.get('folder');
+    if (!folderId) return;
+    folderService
+      .getById(folderId)
+      .then((f) => {
+        if (!f) return;
+        setCurrentFolder(f);
+        setBreadcrumbs([f]);
+      })
+      .catch((err) => console.error('Failed to load deep-linked folder:', err))
+      .finally(() => {
+        // Clean URL sau khi đã đọc, tránh re-trigger khi user navigate trong page
+        setSearchParams({}, { replace: true });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // Đóng menu khi click ngoài
