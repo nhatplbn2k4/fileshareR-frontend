@@ -11,6 +11,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import Documents from './pages/Documents';
 import Folders from './pages/Folders';
+import PdfToWord from './pages/PdfToWord';
 import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
 import Search from './pages/Search';
@@ -139,6 +140,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Folders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pdf-to-word"
+            element={
+              <ProtectedRoute>
+                <PdfToWord />
               </ProtectedRoute>
             }
           />

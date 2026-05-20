@@ -8,6 +8,7 @@ import logoImg from '../../assets/logo1024x1024.png';
 import {
   LayoutDashboard,
   FileText,
+  FileType2,
   Folder,
   Search,
   Settings,
@@ -93,6 +94,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { path: '/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
     { path: '/documents', icon: FileText, label: 'Tài Liệu' },
     { path: '/folders', icon: Folder, label: 'Thư Mục' },
+    { path: '/pdf-to-word', icon: FileType2, label: 'PDF sang Word' },
     { path: '/groups', icon: Users, label: 'Nhóm' },
     { path: '/search', icon: Search, label: 'Tìm Kiếm' },
     { path: '/settings', icon: Settings, label: 'Cài Đặt' },
