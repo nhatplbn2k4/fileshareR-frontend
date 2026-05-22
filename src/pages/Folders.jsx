@@ -4,12 +4,15 @@ import MainLayout from '../components/layout/MainLayout';
 import folderService from '../services/folderService';
 import documentService from '../services/documentService';
 import DocumentViewerModal from '../components/DocumentViewerModal';
+import DocFormModal from '../components/DocFormModal';
+import DocVisibilityBadge from '../components/DocVisibilityBadge';
 import {
   Folder,
   FolderOpen,
   FolderPlus,
   MoreVertical,
   Edit,
+  Pencil,
   Trash2,
   FileText,
   ChevronRight,
@@ -315,12 +318,27 @@ const Folders = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [viewingDoc, setViewingDoc] = useState(null);
 
+  // Doc upload/edit flow (mirror Documents.jsx — không dùng window.prompt)
+  const [pendingUploadFile, setPendingUploadFile] = useState(null);
+  const [uploadForm, setUploadForm] = useState({ title: '', folderId: '', visibility: 'PRIVATE' });
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [editDocForm, setEditDocForm] = useState({ title: '', folderId: '', visibility: 'PRIVATE' });
+  const [editDocLoading, setEditDocLoading] = useState(false);
+  // Cache toàn bộ folders (cho dropdown trong modal — fetch một lần)
+  const [allFolders, setAllFolders] = useState([]);
+
   // Stats
   const [totalDownloads, setTotalDownloads] = useState(0);
 
   const fileInputRef = useRef(null);
 
   useEffect(() => { fetchData(); }, [currentFolder]);
+
+  // Cache toàn bộ folders (cho dropdown chọn folder trong modal doc).
+  // Fetch một lần khi mount, refresh khi user tạo/sửa folder (folders/currentFolder thay đổi).
+  useEffect(() => {
+    folderService.getAll().then(setAllFolders).catch(() => {});
+  }, [folders.length]);
 
   // Deep-link: ?folder=<id> → preselect folder (vd: click từ Dashboard "Tài liệu gần đây")
   useEffect(() => {
@@ -414,22 +432,37 @@ const Folders = () => {
   };
 
   // Document actions
-  const handleUpload = async (e) => {
+  const handleFileSelected = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (!currentFolder) { toast.info('Vui lòng chọn một thư mục trước khi upload tài liệu'); return; }
-    const title = prompt('Nhập tiêu đề tài liệu:', file.name.replace(/\.[^/.]+$/, ''));
-    if (!title) return;
+    setPendingUploadFile(file);
+    // Visibility mặc định bám theo folder hiện tại — folder PUBLIC → doc PUBLIC.
+    const defaultVis = currentFolder.visibility === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE';
+    setUploadForm({
+      title: file.name.replace(/\.[^/.]+$/, ''),
+      folderId: String(currentFolder.id),
+      visibility: defaultVis,
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+  const handleConfirmUpload = async () => {
+    if (!pendingUploadFile || !uploadForm.title.trim()) return;
     try {
       setUploadLoading(true);
-      await documentService.upload(file, title, currentFolder.id, 'PRIVATE');
+      await documentService.upload(
+        pendingUploadFile,
+        uploadForm.title.trim(),
+        uploadForm.folderId ? Number(uploadForm.folderId) : null,
+        uploadForm.visibility,
+      );
+      setPendingUploadFile(null);
       await fetchData();
       toast.success('Upload thành công!');
     } catch (error) {
       toast.error('Upload thất bại: ' + (error.response?.data?.message || error.message));
     } finally {
       setUploadLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
   const handleDownloadDoc = async (doc) => {
@@ -442,6 +475,33 @@ const Folders = () => {
     await documentService.delete(doc.id);
     setDocuments(prev => prev.filter(d => d.id !== doc.id));
     setShowDocMenu(null);
+  };
+  const handleOpenEditDoc = (doc) => {
+    setEditingDoc(doc);
+    setEditDocForm({
+      title: doc.title || '',
+      folderId: doc.folderId ? String(doc.folderId) : '',
+      visibility: doc.visibility || 'PRIVATE',
+    });
+    setShowDocMenu(null);
+  };
+  const handleSaveEditDoc = async () => {
+    if (!editingDoc || !editDocForm.title.trim()) return;
+    try {
+      setEditDocLoading(true);
+      await documentService.update(editingDoc.id, {
+        title: editDocForm.title.trim(),
+        folderId: editDocForm.folderId ? Number(editDocForm.folderId) : null,
+        visibility: editDocForm.visibility,
+      });
+      setEditingDoc(null);
+      await fetchData();
+      toast.success('Cập nhật thành công');
+    } catch (error) {
+      toast.error('Cập nhật thất bại: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setEditDocLoading(false);
+    }
   };
 
   return (
@@ -466,7 +526,7 @@ const Folders = () => {
                     : <Upload className="w-4 h-4" />}
                   {uploadLoading ? 'Đang tải...' : 'Tải Lên'}
                 </button>
-                <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleUpload} className="hidden" />
+                <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleFileSelected} className="hidden" />
               </>
             )}
             <button
@@ -615,6 +675,7 @@ const Folders = () => {
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="text-left px-5 py-3 font-medium text-gray-600">Tên tài liệu</th>
+                        <th className="text-left px-5 py-3 font-medium text-gray-600 hidden md:table-cell">Trạng thái</th>
                         <th className="text-left px-5 py-3 font-medium text-gray-600 hidden md:table-cell">Loại</th>
                         <th className="text-left px-5 py-3 font-medium text-gray-600 hidden lg:table-cell">Kích thước</th>
                         <th className="text-left px-5 py-3 font-medium text-gray-600 hidden lg:table-cell">
@@ -644,6 +705,9 @@ const Folders = () => {
                             </div>
                           </td>
                           <td className="px-5 py-3 hidden md:table-cell">
+                            <DocVisibilityBadge value={doc.visibility} />
+                          </td>
+                          <td className="px-5 py-3 hidden md:table-cell">
                             <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs uppercase font-medium">
                               {doc.fileType}
                             </span>
@@ -661,6 +725,13 @@ const Folders = () => {
                           </td>
                           <td className="px-5 py-3">
                             <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleOpenEditDoc(doc)}
+                                className="p-1.5 text-gray-400 hover:text-ocean-600 hover:bg-ocean-50 rounded-lg transition"
+                                title="Chỉnh sửa"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => handleDownloadDoc(doc)}
                                 className="p-1.5 text-gray-400 hover:text-ocean-600 hover:bg-ocean-50 rounded-lg transition"
@@ -683,7 +754,7 @@ const Folders = () => {
                     {/* Footer tổng lượt tải */}
                     <tfoot className="border-t border-gray-200 bg-gray-50">
                       <tr>
-                        <td colSpan={3} className="px-5 py-2.5 text-sm text-gray-500 font-medium">
+                        <td colSpan={4} className="px-5 py-2.5 text-sm text-gray-500 font-medium">
                           Tổng cộng: {documents.length} tài liệu
                         </td>
                         <td className="px-5 py-2.5 hidden lg:table-cell">
@@ -780,6 +851,36 @@ const Folders = () => {
       )}
 
       <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
+
+      {/* Upload doc modal — title + folder + visibility (thay window.prompt cũ) */}
+      {pendingUploadFile && (
+        <DocFormModal
+          title="Tải lên tài liệu"
+          fileName={pendingUploadFile.name}
+          form={uploadForm}
+          setForm={setUploadForm}
+          folders={allFolders}
+          loading={uploadLoading}
+          onClose={() => !uploadLoading && setPendingUploadFile(null)}
+          onSubmit={handleConfirmUpload}
+          submitLabel="Tải lên"
+        />
+      )}
+
+      {/* Edit doc modal — sửa title/folder/visibility cho doc hiện tại */}
+      {editingDoc && (
+        <DocFormModal
+          title="Chỉnh sửa tài liệu"
+          fileName={editingDoc.fileName}
+          form={editDocForm}
+          setForm={setEditDocForm}
+          folders={allFolders}
+          loading={editDocLoading}
+          onClose={() => !editDocLoading && setEditingDoc(null)}
+          onSubmit={handleSaveEditDoc}
+          submitLabel="Lưu thay đổi"
+        />
+      )}
     </MainLayout>
   );
 };
