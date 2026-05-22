@@ -21,6 +21,9 @@ import {
   Clock,
   HardDrive,
   BarChart2,
+  Globe,
+  Lock,
+  Pencil,
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -32,10 +35,15 @@ const Documents = () => {
   const [viewingDoc, setViewingDoc] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState(null);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(null);
   const [showMenu, setShowMenu] = useState(null);
+  // Upload flow (replaces window.prompt)
+  const [pendingUploadFile, setPendingUploadFile] = useState(null);
+  const [uploadForm, setUploadForm] = useState({ title: '', folderId: '', visibility: 'PRIVATE' });
+  // Edit flow
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', folderId: '', visibility: 'PRIVATE' });
+  const [editLoading, setEditLoading] = useState(false);
   const toast = useToast();
 
   const fileInputRef = useRef(null);
@@ -62,16 +70,30 @@ const Documents = () => {
     }
   };
 
-  const handleUpload = async (e) => {
+  // Bước 1: user chọn file → mở upload modal để nhập title/folder/visibility
+  const handleFileSelected = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setPendingUploadFile(file);
+    setUploadForm({
+      title: file.name.replace(/\.[^/.]+$/, ''),
+      folderId: selectedFolder || '',
+      visibility: 'PRIVATE',
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
-    const title = prompt('Nhập tiêu đề tài liệu:', file.name.replace(/\.[^/.]+$/, ''));
-    if (!title) return;
-
+  const handleConfirmUpload = async () => {
+    if (!pendingUploadFile || !uploadForm.title.trim()) return;
     try {
       setUploadLoading(true);
-      await documentService.upload(file, title, selectedFolder, 'PRIVATE');
+      await documentService.upload(
+        pendingUploadFile,
+        uploadForm.title.trim(),
+        uploadForm.folderId || null,
+        uploadForm.visibility,
+      );
+      setPendingUploadFile(null);
       await fetchData();
       toast.success('Upload thành công!');
     } catch (error) {
@@ -79,9 +101,35 @@ const Documents = () => {
       toast.error('Upload thất bại: ' + (error.response?.data?.message || error.message));
     } finally {
       setUploadLoading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    }
+  };
+
+  const handleOpenEdit = (doc) => {
+    setEditingDoc(doc);
+    setEditForm({
+      title: doc.title || '',
+      folderId: doc.folderId ? String(doc.folderId) : '',
+      visibility: doc.visibility || 'PRIVATE',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDoc || !editForm.title.trim()) return;
+    try {
+      setEditLoading(true);
+      await documentService.update(editingDoc.id, {
+        title: editForm.title.trim(),
+        folderId: editForm.folderId ? Number(editForm.folderId) : null,
+        visibility: editForm.visibility,
+      });
+      setEditingDoc(null);
+      await fetchData();
+      toast.success('Cập nhật thành công');
+    } catch (error) {
+      console.error('Update error:', error);
+      toast.error('Cập nhật thất bại: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -184,7 +232,7 @@ const Documents = () => {
             ref={fileInputRef}
             type="file"
             accept=".pdf,.doc,.docx,.txt"
-            onChange={handleUpload}
+            onChange={handleFileSelected}
             className="hidden"
           />
         </div>
@@ -278,7 +326,17 @@ const Documents = () => {
                       <MoreVertical className="w-5 h-5 text-gray-500" />
                     </button>
                     {showMenu === doc.id && (
-                      <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[120px]">
+                      <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[140px]">
+                        <button
+                          onClick={() => {
+                            handleOpenEdit(doc);
+                            setShowMenu(null);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                        >
+                          <Pencil className="w-4 h-4" />
+                          <span>Chỉnh sửa</span>
+                        </button>
                         <button
                           onClick={() => {
                             handleDownload(doc);
@@ -306,6 +364,10 @@ const Documents = () => {
 
                 <h3 className="font-medium text-gray-900 truncate mb-1">{doc.title}</h3>
                 <p className="text-sm text-gray-500 truncate mb-2">{doc.fileName}</p>
+
+                <div className="mb-2">
+                  <VisibilityBadge value={doc.visibility} />
+                </div>
 
                 {doc.summary && (
                   <p className="text-xs text-gray-600 mb-2 line-clamp-2" title={doc.summary}>
@@ -350,6 +412,7 @@ const Documents = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tài liệu</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Trạng thái</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Thư mục</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Kích thước</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">
@@ -384,6 +447,9 @@ const Documents = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
+                      <VisibilityBadge value={doc.visibility} />
+                    </td>
+                    <td className="px-6 py-4 hidden md:table-cell">
                       {doc.folderName ? (
                         <span className="inline-flex items-center text-sm text-ocean-600">
                           <FolderOpen className="w-4 h-4 mr-1" />
@@ -406,6 +472,13 @@ const Documents = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        <button
+                          onClick={() => handleOpenEdit(doc)}
+                          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-ocean-600 transition-colors"
+                          title="Chỉnh sửa"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleDownload(doc)}
                           className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-ocean-600 transition-colors"
@@ -458,7 +531,171 @@ const Documents = () => {
       </div>
 
       <DocumentViewerModal doc={viewingDoc} onClose={() => setViewingDoc(null)} />
+
+      {/* Upload modal — chọn title + folder + visibility trước khi gọi API */}
+      {pendingUploadFile && (
+        <DocFormModal
+          title="Tải lên tài liệu"
+          fileName={pendingUploadFile.name}
+          form={uploadForm}
+          setForm={setUploadForm}
+          folders={folders}
+          loading={uploadLoading}
+          onClose={() => !uploadLoading && setPendingUploadFile(null)}
+          onSubmit={handleConfirmUpload}
+          submitLabel="Tải lên"
+        />
+      )}
+
+      {/* Edit modal — sửa title + folder + visibility cho doc hiện tại */}
+      {editingDoc && (
+        <DocFormModal
+          title="Chỉnh sửa tài liệu"
+          fileName={editingDoc.fileName}
+          form={editForm}
+          setForm={setEditForm}
+          folders={folders}
+          loading={editLoading}
+          onClose={() => !editLoading && setEditingDoc(null)}
+          onSubmit={handleSaveEdit}
+          submitLabel="Lưu thay đổi"
+        />
+      )}
     </MainLayout>
+  );
+};
+
+/** Badge hiển thị trạng thái PRIVATE/PUBLIC. */
+const VisibilityBadge = ({ value }) => {
+  const isPublic = value === 'PUBLIC';
+  const isShared = value === 'SHARED';
+  if (isPublic) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">
+        <Globe className="w-3 h-3" /> Công khai
+      </span>
+    );
+  }
+  if (isShared) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+        <Globe className="w-3 h-3" /> Chia sẻ
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+      <Lock className="w-3 h-3" /> Riêng tư
+    </span>
+  );
+};
+
+/**
+ * Modal dùng chung cho cả Upload và Edit — 3 field: title, folderId, visibility.
+ * Tách ra để tránh duplicate JSX giữa 2 flow.
+ */
+const DocFormModal = ({ title, fileName, form, setForm, folders, loading, onClose, onSubmit, submitLabel }) => {
+  const titleValid = form.title?.trim().length > 0;
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg" disabled={loading}>
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {fileName && (
+            <div className="text-xs text-gray-500 truncate">
+              File: <span className="text-gray-700 font-mono">{fileName}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ocean-500 focus:border-transparent"
+              placeholder="Tên hiển thị của tài liệu"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Thư mục</label>
+            <select
+              value={form.folderId || ''}
+              onChange={(e) => setForm({ ...form, folderId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ocean-500 focus:border-transparent"
+            >
+              <option value="">— Không thuộc thư mục nào —</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} {f.visibility === 'PUBLIC' ? '(Công khai)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: 'PRIVATE', label: 'Riêng tư', desc: 'Chỉ bạn xem được', Icon: Lock },
+                { value: 'PUBLIC', label: 'Công khai', desc: 'Hiển thị cho mọi người', Icon: Globe },
+              ].map(({ value, label, desc, Icon }) => {
+                const active = form.visibility === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setForm({ ...form, visibility: value })}
+                    className={`text-left p-3 rounded-lg border-2 transition ${
+                      active
+                        ? 'border-ocean-500 bg-ocean-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className={`w-4 h-4 ${active ? 'text-ocean-600' : 'text-gray-500'}`} />
+                      <span className={`text-sm font-semibold ${active ? 'text-ocean-700' : 'text-gray-700'}`}>
+                        {label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">{desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Lưu ý: tài liệu trong thư mục công khai sẽ tự động đặt thành công khai.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={!titleValid || loading}
+            className="px-4 py-2 text-sm bg-ocean-500 text-white rounded-lg hover:bg-ocean-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+            {submitLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
