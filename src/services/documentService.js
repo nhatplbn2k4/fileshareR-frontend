@@ -91,6 +91,15 @@ const documentService = {
     return response.data;
   },
 
+  // Lấy danh sách tài liệu PUBLIC có nội dung liên quan (Cosine Similarity trên TF-IDF).
+  // Anonymous-friendly: endpoint cho phép gọi không cần JWT cho tài liệu PUBLIC.
+  getSimilar: async (documentId, limit = 5) => {
+    const response = await api.get(`/api/documents/${documentId}/similar`, {
+      params: { limit },
+    });
+    return response.data;
+  },
+
   // Lưu tài liệu vào thư mục của mình
   saveToFolder: async (documentId, folderId = null) => {
     const params = {};
