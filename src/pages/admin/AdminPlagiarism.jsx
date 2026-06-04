@@ -167,14 +167,25 @@ const ResolveModal = ({ open, detail, onClose, onResolved }) => {
                 <div key={idx} className="border rounded-lg p-3 bg-white">
                   <div className="flex items-start justify-between gap-3 mb-1">
                     <div className="flex-1">
-                      <div className="font-medium text-sm text-gray-900">{m.matchedTitle}</div>
+                      {m.externalUrl ? (
+                        <a
+                          href={m.externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-sm text-blue-600 hover:underline break-all"
+                        >
+                          🌐 {m.matchedTitle}
+                        </a>
+                      ) : (
+                        <div className="font-medium text-sm text-gray-900">{m.matchedTitle}</div>
+                      )}
                       <div className="text-xs text-gray-500">
-                        Chủ sở hữu: {m.matchedOwnerEmail || '-'}
+                        {m.externalUrl ? 'Nguồn internet' : `Chủ sở hữu: ${m.matchedOwnerEmail || '-'}`}
                       </div>
                     </div>
                     <ScoreBadge score={m.similarityScore} />
                   </div>
-                  {m.snippet && (
+                  {m.snippet && !m.externalUrl && (
                     <p className="text-xs text-gray-600 mt-1 leading-relaxed border-l-2 border-gray-200 pl-2 italic">
                       "{m.snippet}"
                     </p>
