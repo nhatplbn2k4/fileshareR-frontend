@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import authService from '../services/authService';
 import billingService from '../services/billingService';
 import StorageProgress from '../components/StorageProgress';
+import StorageManagement from '../components/StorageManagement';
 import StorageUpgradeModal from '../components/StorageUpgradeModal';
 import {
   User,
@@ -280,6 +281,7 @@ const Settings = () => {
                   <StorageProgress
                     used={storage.storageUsed}
                     total={storage.totalQuotaBytes}
+                    allocated={storage.allocatedQuotaBytes}
                     planName={storage.plan?.name}
                   />
                   {storage.bonusStorageBytes > 0 && (
@@ -434,6 +436,9 @@ const Settings = () => {
                 </button>
               </form>
             </div>
+
+            {/* Quản lý bộ nhớ — phân vùng cá nhân / nhóm */}
+            <StorageManagement storage={storage} userId={user?.id} />
 
             {/* Password Form with OTP — ẩn cho OAuth users */}
             {user?.authProvider === 'LOCAL' && (

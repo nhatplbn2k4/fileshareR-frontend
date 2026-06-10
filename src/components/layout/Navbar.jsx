@@ -1,19 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Search as SearchIcon } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../notifications/NotificationBell';
+import SearchBox from '../SearchBox';
 
 const Navbar = ({ toggleSidebar }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-  };
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30">
@@ -27,16 +21,13 @@ const Navbar = ({ toggleSidebar }) => {
         </button>
 
         {/* Search bar */}
-        <form onSubmit={handleSearch} className="hidden md:flex items-center bg-gray-100 rounded-lg px-4 py-2 w-96">
-          <SearchIcon className="w-5 h-5 text-gray-400 mr-2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+        <div className="hidden md:block w-96">
+          <SearchBox
+            variant="navbar"
             placeholder="Tìm kiếm tài liệu, nhóm..."
-            className="bg-transparent border-none outline-none flex-1 text-sm text-gray-700 placeholder-gray-400"
+            onSubmit={(kw) => navigate(`/search?q=${encodeURIComponent(kw)}`)}
           />
-        </form>
+        </div>
       </div>
 
       {/* Right side */}

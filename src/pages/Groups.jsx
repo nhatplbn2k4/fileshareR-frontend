@@ -2,11 +2,15 @@ import React, { useEffect, useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { useNavigate } from 'react-router-dom';
 import groupService from '../services/groupService';
+import billingService from '../services/billingService';
 import CoverPicker from '../components/groups/CoverPicker';
+import { formatBytes } from '../utils/format';
 import {
   Users, Plus, Search, Globe, Lock, Crown, Shield,
-  User, ArrowRight, Loader2, RefreshCw, X
+  User, ArrowRight, Loader2, RefreshCw, X, HardDrive
 } from 'lucide-react';
+
+const MB = 1024 * 1024;
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -71,6 +75,26 @@ const GroupCard = ({ group, onClick }) => (
         <p className="text-sm text-gray-500 mb-3 line-clamp-2">{group.description}</p>
       )}
 
+      {/* Thanh dung lượng nhóm */}
+      {(group.allocatedQuotaBytes != null) && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+            <span className="flex items-center gap-1"><HardDrive className="w-3.5 h-3.5" /> Dung lượng</span>
+            <span>{formatBytes(group.storageUsed || 0)} / {formatBytes(group.allocatedQuotaBytes || 0)}</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-ocean-500 rounded-full"
+              style={{
+                width: `${group.allocatedQuotaBytes > 0
+                  ? Math.min(100, Math.round((group.storageUsed || 0) / group.allocatedQuotaBytes * 100))
+                  : 0}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between pt-3 border-t border-gray-50">
         <span className="text-xs text-gray-400 flex items-center gap-1">
           <Users className="w-3.5 h-3.5" /> {group.memberCount} thành viên
@@ -85,11 +109,24 @@ const GroupCard = ({ group, onClick }) => (
 
 const CreateGroupModal = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({ name: '', description: '', visibility: 'PRIVATE' });
+  const [quotaMb, setQuotaMb] = useState(0);
+  const [available, setAvailable] = useState(null); // bytes khả dụng của user
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [cover, setCover] = useState({ presetId: null, presetUrl: null, customBlob: null, customUrl: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    billingService.getMyStorage()
+      .then(info => { if (mounted) setAvailable(Math.max(0, info.availableQuotaBytes ?? 0)); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const availableMb = available != null ? Math.floor(available / MB) : null;
+  const quotaBytes = Math.round((Number(quotaMb) || 0) * MB);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -101,10 +138,14 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return setError('Tên nhóm không được để trống');
+    if (quotaBytes < 0) return setError('Dung lượng cấp cho nhóm không hợp lệ');
+    if (available != null && quotaBytes > available) {
+      return setError(`Dung lượng cấp vượt quá dung lượng khả dụng của bạn (${formatBytes(available)})`);
+    }
     setLoading(true);
     try {
       // Create group với preset id nếu user chọn preset, server sẽ random pick khác nếu null
-      const payload = { ...form };
+      const payload = { ...form, allocatedQuotaBytes: quotaBytes };
       if (cover.presetId) payload.coverPresetId = cover.presetId;
       const group = await groupService.createGroup(payload);
 
@@ -209,6 +250,33 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
               ))}
             </div>
           </div>
+          {/* Cấp dung lượng cho nhóm (lấy từ quota cá nhân) */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+              <HardDrive className="w-4 h-4 text-ocean-500" /> Dung lượng cấp cho nhóm
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={availableMb ?? undefined}
+                value={quotaMb}
+                onChange={e => setQuotaMb(e.target.value)}
+                className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-transparent"
+              />
+              <span className="text-sm text-gray-500">MB</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Dung lượng này được lấy từ quota cá nhân của bạn — thành viên upload sẽ dùng chung phần này.
+              {available != null && (
+                <> Khả dụng: <span className="font-medium text-gray-700">{formatBytes(available)}</span>.</>
+              )}
+            </p>
+            {available != null && quotaBytes > available && (
+              <p className="text-xs text-red-500 mt-1">Vượt quá dung lượng khả dụng.</p>
+            )}
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -217,7 +285,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
             >Hủy</button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (available != null && quotaBytes > available)}
               className="flex-1 px-4 py-2.5 bg-gradient-to-r from-ocean-500 to-ocean-600 text-white rounded-lg text-sm font-semibold hover:from-ocean-600 hover:to-ocean-700 transition disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}

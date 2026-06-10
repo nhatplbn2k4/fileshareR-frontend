@@ -5,12 +5,12 @@ import documentService from '../services/documentService';
 import groupService from '../services/groupService';
 import folderService from '../services/folderService';
 import DocumentViewerModal from '../components/DocumentViewerModal';
+import SearchBox from '../components/SearchBox';
 import {
   Search as SearchIcon, FileText, File, Download, Clock, HardDrive,
   FolderOpen, AlertCircle, Tag, BarChart2, User, Users, X, Check,
   FolderPlus, Loader2, BookmarkPlus, Globe, Lock,
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
 // ── Save to folder modal ──────────────────────────────────────────────────────
@@ -138,7 +138,6 @@ const Search = () => {
   const [searched, setSearched] = useState(false);
   const [savingDoc, setSavingDoc] = useState(null);
   const [activeTab, setActiveTab] = useState('documents');
-  const { isAuthenticated } = useAuth();
 
   // Auto-search khi mở từ header (có ?q=)
   useEffect(() => {
@@ -164,12 +163,6 @@ const Search = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    doSearch(query);
   };
 
   const getFileIcon = (fileType) => {
@@ -199,18 +192,12 @@ const Search = () => {
           <p className="text-gray-600">Tim kiem tai lieu va nhom</p>
         </div>
 
-        <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
-          <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" />
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nhập từ khóa tìm kiếm..."
-              className="w-full pl-12 pr-32 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-ocean-500 focus:border-transparent shadow-sm" />
-            <button type="submit" disabled={loading || !query.trim()}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-gradient-to-r from-ocean-500 to-ocean-600 text-white rounded-lg hover:from-ocean-600 hover:to-ocean-700 transition disabled:opacity-50">
-              {loading ? 'Đang tìm...' : 'Tìm kiếm'}
-            </button>
-          </div>
-        </form>
+        <SearchBox
+          variant="page"
+          initialValue={query}
+          placeholder="Nhập từ khóa tìm kiếm..."
+          onSubmit={(kw) => { setQuery(kw); doSearch(kw); }}
+        />
 
         {/* Tabs */}
         {searched && !loading && (

@@ -238,6 +238,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             <StorageProgress
               used={storage.storageUsed}
               total={storage.totalQuotaBytes}
+              allocated={storage.allocatedQuotaBytes}
               compact
             />
           </Link>

@@ -17,6 +17,9 @@ import {
   BookmarkPlus, HardDrive, FolderOpen as FolderOpenIcon, Clock, Camera, Eye
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { formatBytes } from '../utils/format';
+
+const MB = 1024 * 1024;
 
 // ── Generic share link modal (dùng chung cho group invite + group folder) ───
 
@@ -1275,13 +1278,55 @@ const SettingsTab = ({ group, onUpdated, onDeleted, members }) => {
   const [groupStorage, setGroupStorage] = useState(null);
   const [storageOpen, setStorageOpen] = useState(false);
 
+  // Cấp phát dung lượng cho nhóm (lấy từ quota cá nhân của owner)
+  const [myStorage, setMyStorage] = useState(null);
+  const [allocMb, setAllocMb] = useState(Math.floor((group.allocatedQuotaBytes || 0) / MB));
+  const [allocSaving, setAllocSaving] = useState(false);
+  const [allocError, setAllocError] = useState('');
+  const [allocSuccess, setAllocSuccess] = useState('');
+
+  const refreshStorage = useCallback(() => {
+    billingService.getGroupStorage(group.id).then(setGroupStorage).catch(() => {});
+    billingService.getMyStorage().then(setMyStorage).catch(() => {});
+  }, [group.id]);
+
   useEffect(() => {
     let mounted = true;
     billingService.getGroupStorage(group.id)
-      .then(info => mounted && setGroupStorage(info))
+      .then(info => { if (mounted) { setGroupStorage(info); setAllocMb(Math.floor((info.allocatedQuotaBytes || 0) / MB)); } })
+      .catch(() => {});
+    billingService.getMyStorage()
+      .then(info => mounted && setMyStorage(info))
       .catch(() => {});
     return () => { mounted = false; };
   }, [group.id]);
+
+  const usedBytes = groupStorage?.storageUsed ?? group.storageUsed ?? 0;
+  const currentAllocated = groupStorage?.allocatedQuotaBytes ?? group.allocatedQuotaBytes ?? 0;
+  // Ngân sách tối đa có thể đặt = dung lượng owner còn khả dụng + phần đang cấp cho nhóm này
+  const allocBudget = myStorage != null
+    ? Math.max(0, (myStorage.availableQuotaBytes ?? 0)) + currentAllocated
+    : null;
+  const newAllocBytes = Math.round((Number(allocMb) || 0) * MB);
+
+  const handleSaveAllocation = async () => {
+    setAllocError(''); setAllocSuccess('');
+    if (newAllocBytes < usedBytes) {
+      return setAllocError(`Không thể đặt thấp hơn dung lượng nhóm đã dùng (${formatBytes(usedBytes)}).`);
+    }
+    if (allocBudget != null && newAllocBytes > allocBudget) {
+      return setAllocError(`Vượt quá dung lượng khả dụng của bạn (tối đa ${formatBytes(allocBudget)}).`);
+    }
+    setAllocSaving(true);
+    try {
+      const updated = await groupService.updateGroup(group.id, { allocatedQuotaBytes: newAllocBytes });
+      onUpdated(updated);
+      refreshStorage();
+      setAllocSuccess('Đã cập nhật dung lượng nhóm!');
+    } catch (err) {
+      setAllocError(err?.response?.data?.message || 'Cập nhật dung lượng thất bại');
+    } finally { setAllocSaving(false); }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -1340,6 +1385,54 @@ const SettingsTab = ({ group, onUpdated, onDeleted, members }) => {
         groupId={group.id}
         currentPlanCode={groupStorage?.plan?.code}
       />
+
+      {/* Cấp phát dung lượng cho nhóm (từ quota cá nhân của chủ nhóm) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <HardDrive className="w-5 h-5 text-ocean-500" />
+          <h3 className="font-semibold text-gray-900">Dung lượng cấp cho nhóm</h3>
+        </div>
+        <p className="text-sm text-gray-500">
+          Dung lượng nhóm được lấy từ quota cá nhân của bạn. Thành viên upload sẽ dùng chung phần này.
+        </p>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="bg-gray-50 rounded-lg px-3 py-2">
+            <div className="text-gray-500">Đang cấp</div>
+            <div className="font-semibold text-gray-900">{formatBytes(currentAllocated)}</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg px-3 py-2">
+            <div className="text-gray-500">Nhóm đã dùng</div>
+            <div className="font-semibold text-gray-900">{formatBytes(usedBytes)}</div>
+          </div>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Đặt lại dung lượng (MB)</label>
+            <input
+              type="number"
+              min={Math.ceil(usedBytes / MB)}
+              max={allocBudget != null ? Math.floor(allocBudget / MB) : undefined}
+              value={allocMb}
+              onChange={e => setAllocMb(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={handleSaveAllocation}
+            disabled={allocSaving}
+            className="px-4 py-2 bg-ocean-500 text-white rounded-lg text-sm font-medium hover:bg-ocean-600 transition-colors disabled:opacity-60 flex items-center gap-2"
+          >
+            {allocSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            Lưu
+          </button>
+        </div>
+        <p className="text-xs text-gray-500">
+          Tối thiểu {formatBytes(usedBytes)} (đã dùng)
+          {allocBudget != null && <> · tối đa {formatBytes(allocBudget)} (khả dụng của bạn)</>}.
+        </p>
+        {allocError && <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-2 text-sm">{allocError}</div>}
+        {allocSuccess && <div className="bg-green-50 border border-green-200 text-green-600 rounded-lg px-4 py-2 text-sm flex items-center gap-2"><Check className="w-4 h-4" /> {allocSuccess}</div>}
+      </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 text-sm">{error}</div>}
       {success && <div className="bg-green-50 border border-green-200 text-green-600 rounded-lg px-4 py-3 text-sm flex items-center gap-2"><Check className="w-4 h-4" /> {success}</div>}
