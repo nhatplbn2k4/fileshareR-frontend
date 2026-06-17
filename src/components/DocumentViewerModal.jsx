@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Download, FileText, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Download, FileText, AlertCircle, Sparkles, UserRound } from 'lucide-react';
 import mammoth from 'mammoth';
 import api from '../services/api';
 import documentService from '../services/documentService';
@@ -138,6 +138,12 @@ const DocumentViewerModal = ({ doc, onClose }) => {
             <div className="min-w-0">
               <div className="font-semibold text-gray-900 truncate">{currentDoc?.title}</div>
               <div className="text-xs text-gray-500 truncate">{currentDoc?.fileName}</div>
+              {currentDoc?.originalAuthorName && (
+                <div className="text-xs text-amber-600 truncate flex items-center gap-1 mt-0.5">
+                  <UserRound className="w-3 h-3 flex-shrink-0" />
+                  Tác giả gốc: <span className="font-medium">{currentDoc.originalAuthorName}</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">

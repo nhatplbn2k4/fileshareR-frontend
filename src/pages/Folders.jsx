@@ -27,6 +27,7 @@ import {
   Lock,
   Link,
   BarChart2,
+  UserRound,
   Check,
   Share2,
   Copy,
@@ -701,6 +702,11 @@ const Folders = () => {
                               <div>
                                 <p className="font-medium text-gray-900">{doc.title}</p>
                                 <p className="text-xs text-gray-400">{doc.fileName}</p>
+                                {doc.originalAuthorName && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-amber-700 mt-0.5">
+                                    <UserRound className="w-3 h-3" /> Lưu từ {doc.originalAuthorName}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </td>

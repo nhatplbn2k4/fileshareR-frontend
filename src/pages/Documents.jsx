@@ -24,6 +24,7 @@ import {
   HardDrive,
   BarChart2,
   Pencil,
+  UserRound,
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -369,6 +370,13 @@ const Documents = () => {
                   <DocVisibilityBadge value={doc.visibility} />
                 </div>
 
+                {doc.originalAuthorName && (
+                  <div className="mb-2 inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full max-w-full">
+                    <UserRound className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">Lưu từ {doc.originalAuthorName}</span>
+                  </div>
+                )}
+
                 {doc.summary && (
                   <p className="text-xs text-gray-600 mb-2 line-clamp-2" title={doc.summary}>
                     {doc.summary}
@@ -438,6 +446,11 @@ const Documents = () => {
                         <div className="max-w-md">
                           <p className="font-medium text-gray-900">{doc.title}</p>
                           <p className="text-sm text-gray-500">{doc.fileName}</p>
+                          {doc.originalAuthorName && (
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-700 mt-1">
+                              <UserRound className="w-3 h-3" /> Lưu từ {doc.originalAuthorName}
+                            </span>
+                          )}
                           {doc.summary && (
                             <p className="text-xs text-gray-400 truncate mt-1" title={doc.summary}>
                               {doc.summary}
