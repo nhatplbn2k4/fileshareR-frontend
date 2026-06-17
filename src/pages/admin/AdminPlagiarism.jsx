@@ -10,10 +10,11 @@ import {
   EyeOff,
   Check,
   AlertTriangle,
-  ExternalLink,
+  Columns2,
 } from 'lucide-react';
 import plagiarismService from '../../services/plagiarismService';
 import { useToast } from '../../context/ToastContext';
+import DocCompareModal from '../../components/DocCompareModal';
 
 const STATUS_LABELS = {
   PENDING: { cls: 'bg-amber-100 text-amber-700', label: 'Chờ xử lý' },
@@ -55,12 +56,14 @@ const ResolveModal = ({ open, detail, onClose, onResolved }) => {
   const [busy, setBusy] = useState(false);
   const [action, setAction] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [compareMatch, setCompareMatch] = useState(null); // match đang so sánh song song
 
   useEffect(() => {
     if (open) {
       setNote('');
       setAction(null);
       setConfirmAction(null);
+      setCompareMatch(null);
     }
   }, [open]);
 
@@ -103,6 +106,7 @@ const ResolveModal = ({ open, detail, onClose, onResolved }) => {
   const isReadOnly = detail.status !== 'PENDING';
 
   return (
+    <>
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8">
         <div className="flex items-center justify-between px-6 py-4 border-b">
@@ -138,17 +142,19 @@ const ResolveModal = ({ open, detail, onClose, onResolved }) => {
                   {' • '}Max score: <ScoreBadge score={detail.maxScore} />
                 </div>
               </div>
-              {detail.suspectedDocumentId && detail.status === 'PENDING' && (
-                <a
-                  href={`/documents/${detail.suspectedDocumentId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  Mở tài liệu
-                </a>
-              )}
+              {(() => {
+                const firstInternal = (detail.matches || []).find((m) => m.matchedDocumentId);
+                if (!detail.suspectedDocumentId || !firstInternal) return null;
+                return (
+                  <button
+                    onClick={() => setCompareMatch(firstInternal)}
+                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    <Columns2 className="w-3 h-3" />
+                    So sánh song song
+                  </button>
+                );
+              })()}
             </div>
             {detail.suspectedSnippet && (
               <p className="text-xs text-gray-700 mt-2 leading-relaxed border-l-2 border-orange-300 pl-3 italic">
@@ -183,7 +189,17 @@ const ResolveModal = ({ open, detail, onClose, onResolved }) => {
                         {m.externalUrl ? 'Nguồn internet' : `Chủ sở hữu: ${m.matchedOwnerEmail || '-'}`}
                       </div>
                     </div>
-                    <ScoreBadge score={m.similarityScore} />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {m.matchedDocumentId && (
+                        <button
+                          onClick={() => setCompareMatch(m)}
+                          className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                        >
+                          <Columns2 className="w-3 h-3" /> So sánh
+                        </button>
+                      )}
+                      <ScoreBadge score={m.similarityScore} />
+                    </div>
                   </div>
                   {m.snippet && !m.externalUrl && (
                     <p className="text-xs text-gray-600 mt-1 leading-relaxed border-l-2 border-gray-200 pl-2 italic">
@@ -291,6 +307,27 @@ const ResolveModal = ({ open, detail, onClose, onResolved }) => {
         </div>
       </div>
     </div>
+
+    {compareMatch && (
+      <DocCompareModal
+        left={{
+          id: detail.suspectedDocumentId,
+          title: detail.suspectedTitle,
+          fileName: detail.suspectedFileName,
+          fileType: detail.suspectedFileType,
+          label: 'Tài liệu nghi vấn',
+        }}
+        right={{
+          id: compareMatch.matchedDocumentId,
+          title: compareMatch.matchedTitle,
+          fileName: compareMatch.matchedFileName,
+          fileType: compareMatch.matchedFileType,
+          label: 'Tài liệu trùng',
+        }}
+        onClose={() => setCompareMatch(null)}
+      />
+    )}
+    </>
   );
 };
 
