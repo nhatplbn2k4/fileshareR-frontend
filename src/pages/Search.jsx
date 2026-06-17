@@ -138,6 +138,7 @@ const Search = () => {
   const [searched, setSearched] = useState(false);
   const [savingDoc, setSavingDoc] = useState(null);
   const [activeTab, setActiveTab] = useState('documents');
+  const [suggested, setSuggested] = useState([]);
 
   // Auto-search khi mở từ header (có ?q=)
   useEffect(() => {
@@ -147,6 +148,15 @@ const Search = () => {
       doSearch(q);
     }
   }, [searchParams]);
+
+  // Gợi ý tài liệu PUBLIC mới nhất (hiển thị khi chưa tìm kiếm)
+  useEffect(() => {
+    let mounted = true;
+    documentService.latestPublic(12)
+      .then((docs) => mounted && setSuggested(Array.isArray(docs) ? docs : []))
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const doSearch = async (keyword) => {
     try {
@@ -363,10 +373,55 @@ const Search = () => {
             </div>
           )
         ) : (
-          <div className="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-100">
-            <SearchIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Tìm kiếm tài liệu</h3>
-            <p className="text-gray-500">Nhập từ khóa để tìm kiếm tài liệu theo tiêu đề, từ khóa hoặc nội dung</p>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-ocean-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Gợi ý tài liệu</h2>
+              <span className="text-sm text-gray-400">— tài liệu công khai mới nhất</span>
+            </div>
+
+            {suggested.length === 0 ? (
+              <div className="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-100">
+                <SearchIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có tài liệu công khai</h3>
+                <p className="text-gray-500">Nhập từ khóa để tìm kiếm tài liệu theo tiêu đề, từ khóa hoặc nội dung</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {suggested.map((doc) => (
+                  <div key={doc.id}
+                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-ocean-200 transition cursor-pointer select-none flex flex-col"
+                    onDoubleClick={() => setViewingDoc(doc)}
+                    title="Nhấn đúp để xem">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        {getFileIcon(doc.fileType)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate">{doc.title}</h3>
+                        <p className="text-xs text-gray-500 truncate">{doc.fileName}</p>
+                        {doc.summary && (
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">{doc.summary}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50 text-xs text-gray-400">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <User className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{doc.userName}</span>
+                      </span>
+                      <span className="flex items-center gap-2 flex-shrink-0">
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatDate(doc.createdAt)}</span>
+                        <button onClick={(e) => { e.stopPropagation(); setSavingDoc(doc); }}
+                          className="p-1 hover:bg-ocean-50 rounded text-gray-500 hover:text-ocean-600 transition" title="Tải về / Lưu">
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -91,6 +91,12 @@ const documentService = {
     return response.data;
   },
 
+  // Gợi ý: tài liệu PUBLIC mới nhất (cho trang tìm kiếm khi chưa nhập từ khóa)
+  latestPublic: async (limit = 12) => {
+    const response = await api.get('/api/documents/public/latest', { params: { limit } });
+    return response.data;
+  },
+
   // Lấy danh sách tài liệu PUBLIC có nội dung liên quan (Cosine Similarity trên TF-IDF).
   // Anonymous-friendly: endpoint cho phép gọi không cần JWT cho tài liệu PUBLIC.
   getSimilar: async (documentId, limit = 5) => {

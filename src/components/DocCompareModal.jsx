@@ -36,7 +36,7 @@ const DocCompareModal = ({ left, right, onClose }) => {
         </div>
 
         {/* Two columns */}
-        <div className="flex-1 grid grid-cols-2 gap-px bg-gray-200 overflow-hidden rounded-b-2xl">
+        <div className="flex-1 min-h-0 flex gap-px bg-gray-200 overflow-hidden rounded-b-2xl">
           <ComparePane doc={left} accent="orange" />
           <ComparePane doc={right} accent="blue" />
         </div>
@@ -99,7 +99,7 @@ const ComparePane = ({ doc, accent }) => {
   }, [doc?.id, fileType]);
 
   return (
-    <div className="bg-white flex flex-col min-w-0">
+    <div className="flex-1 min-w-0 min-h-0 bg-white flex flex-col">
       {/* Pane header */}
       <div className={`px-4 py-2 border-b ${accentCls} flex-shrink-0`}>
         {doc?.label && <div className="text-[10px] font-semibold uppercase tracking-wide">{doc.label}</div>}
@@ -113,7 +113,7 @@ const ComparePane = ({ doc, accent }) => {
       </div>
 
       {/* Pane body */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-gray-50">
         {loading && (
           <div className="h-full flex flex-col items-center justify-center text-gray-500 py-12">
             <div className="animate-spin h-7 w-7 rounded-full border-2 border-ocean-500 border-t-transparent mb-3" />
